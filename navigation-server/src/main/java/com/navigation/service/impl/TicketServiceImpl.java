@@ -7,19 +7,22 @@ import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.navigation.entity.Scenic;
 import com.navigation.entity.Ticket;
+import com.navigation.handler.OrderWebSocketHandler;
 import com.navigation.mapper.TicketMapper;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.TicketService;
 import com.navigation.utils.JsonUtils;
+import jakarta.annotation.Resource;
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
-import javax.persistence.OptimisticLockException;
+
+
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 import java.time.LocalDateTime;
@@ -41,6 +44,10 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+
+
+
 
     @Override
     public Result<Void> saveTicket(Ticket ticket) {
@@ -97,12 +104,18 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
             ticket.setCreateTime(LocalDateTime.now());
             ticket.setUpdateTime(LocalDateTime.now());
             ticketMapper.saveTicket(ticket);
+
+
             return Result.success();
         } catch (Exception e) {
             log.error("保存门票信息时出现异常", e);
             return Result.error("保存门票信息失败，请稍后重试");
         }
     }
+
+
+
+
 
     @Override
     @Transactional(rollbackFor = Exception.class) // 添加事务管理，确保原子性
@@ -259,6 +272,26 @@ public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> impleme
             return Result.error("根据景点ID查询门票信息失败，请稍后重试");
         }
     }
+
+        @Override
+        public Result<List<Ticket>> queryByScenicName(String name) {
+            try {
+                // 使用 ticketMapper 查询票务信息
+                List<Ticket> tickets = ticketMapper.queryByScenicName(name);
+
+                // 如果票务信息为空，返回提示信息
+                if (tickets.isEmpty()) {
+                    return Result.error("未找到相关景点的票务信息");
+                }
+
+                // 返回成功的结果
+                return Result.success(tickets);
+            } catch (Exception e) {
+                // 如果发生异常，返回错误信息
+                return Result.error("查询票务信息失败：" + e.getMessage());
+            }
+        }
+
 
     @Override
     public Result<Ticket> queryTicketById(Integer ticketId) {

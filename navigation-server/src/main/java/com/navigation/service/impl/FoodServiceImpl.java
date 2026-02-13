@@ -15,13 +15,14 @@ import com.navigation.result.Result;
 import com.navigation.service.FoodService;
 import com.navigation.service.FoodService;
 import com.navigation.utils.JsonUtils;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 import java.time.LocalDateTime;
@@ -243,6 +244,19 @@ public class FoodServiceImpl extends ServiceImpl<FoodMapper, Food> implements Fo
             log.error("根据区域ID查询美食信息时发生异常", e);
             return Result.error("根据区域ID查询美食信息失败，请稍后重试");
         }
+    }
+
+    @Override
+    public Result<List<Food>> findByRegion(String region) {
+        // 查询美食数据
+        List<Food> foods = foodMapper.findByRegion(region);
+
+        // 如果结果为空，返回错误信息
+        if (foods == null || foods.isEmpty()) {
+            return Result.error("未找到该地区的美食推荐。");
+        }
+
+        return Result.success(foods);
     }
 
 

@@ -20,4 +20,6 @@ public interface RegionService extends IService<Region> {
 
 
     Result<Region> queryRegionById(Integer id);
+
+    Result<List<Region>> queryScenicByName(String name);
 }

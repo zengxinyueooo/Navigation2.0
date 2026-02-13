@@ -1,11 +1,13 @@
 package com.navigation.controller.favorite;
 
 import com.navigation.entity.HotelFavorite;
+import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.HotelFavoriteService;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
+
 import java.util.List;
 
 @RestController
@@ -36,37 +38,33 @@ public class HotelFavoriteController {
         return hotelFavoriteService.cancel(hotelId);
     }
 
-    /**
-     * 根据用户ID查询酒店收藏列表
-     * @param userId 用户ID
-     * @return 酒店收藏记录列表结果
-     */
-    @GetMapping("/user/{userId}")
+
+    /*@GetMapping("/user/{userId}")
     public Result<List<HotelFavorite>> getHotelFavoritesByUserId(@PathVariable Integer userId) {
         return hotelFavoriteService.getHotelFavoritesByUserId(userId);
+    }*/
+
+     //根据用户ID和酒店ID查询是否已收藏
+     @GetMapping("/isFavorite/{hotelId}")
+    public Result<Integer> isHotelFavorite(@PathVariable Integer hotelId) {
+        return hotelFavoriteService.isHotelFavorite(hotelId);
     }
 
-    /**
-     * 根据用户ID和酒店ID查询是否已收藏
-     * @param userId 用户ID
-     * @param hotelId 酒店ID
-     * @return true表示已收藏，false表示未收藏
-     */
-    @GetMapping("/isFavorite/{userId}/{hotelId}")
-    public boolean isHotelFavorite(@PathVariable Integer userId, @PathVariable Integer hotelId) {
-        return hotelFavoriteService.isHotelFavorite(userId, hotelId);
+
+    @GetMapping("/info/{hotelId}")
+    public Result<HotelFavorite> getHotelFavoriteInfo(@PathVariable Integer hotelId) {
+        return hotelFavoriteService.getHotelFavoriteInfoByUserIdAndHotelId(hotelId);
     }
 
-    /**
-     * 根据用户ID和酒店ID查询该酒店收藏信息
-     * @param userId 用户ID
-     * @param hotelId 酒店ID
-     * @return 包含酒店收藏信息的Result对象
-     */
-    @GetMapping("/info/{userId}/{hotelId}")
-    public Result<HotelFavorite> getHotelFavoriteInfo(
-            @PathVariable Integer userId,
-            @PathVariable Integer hotelId) {
-        return hotelFavoriteService.getHotelFavoriteInfoByUserIdAndHotelId(userId, hotelId);
+    @GetMapping("/info/name/{hotelName}")
+    public Result<List<HotelFavorite>> getHotelFavoriteInfoByName(@PathVariable String hotelName) {
+        return hotelFavoriteService.getHotelFavoriteInfoByUserIdAndHotelName(hotelName);
+    }
+
+    @GetMapping("/queryPage")
+    public PageResult queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
+                                        @RequestParam(defaultValue = "5") Integer pageSize){
+        //两个参数分别指：从第几页开始查，每页的个数有多少
+        return hotelFavoriteService.queryPageByUserId(page,pageSize);
     }
 }

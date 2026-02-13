@@ -44,4 +44,13 @@ public class Result<T> implements Serializable {
         result.code = 1;
         return result;
     }
+
+    public static <T> Result<T> success(T data, String msg) {
+        Result result = new Result();
+        result.data = data;
+        result.msg = msg;
+        result.code = 1;
+        return result;
+    }
+
 }

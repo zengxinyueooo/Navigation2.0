@@ -14,12 +14,15 @@
     <update id="update" parameterType="com.navigation.entity.Hotel">
         UPDATE hotel
         <set>
+            <if test="regionId != null">region_id = #{regionId},</if>
             <if test="cover != null">cover = #{cover},</if>
             <if test="address != null">address = #{address},</if>
             <if test="phoneNumber != null">phone_number = #{phoneNumber},</if>
             <if test="hotelDescription != null">hotel_description = #{hotelDescription},</if>
             <if test="hotelName != null">hotel_name = #{hotelName},</if>
             <if test="updateTime != null">update_time = #{updateTime},</if>
+            <if test="latitude != null">latitude = #{latitude},</if>
+            <if test="longitude != null">longitude = #{longitude},</if>
         </set>
         WHERE id = #{id}
     </update>

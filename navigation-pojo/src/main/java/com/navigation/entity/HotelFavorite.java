@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.NotBlank;
+
 import java.time.LocalDateTime;
 
 /**
@@ -25,11 +25,11 @@ public class HotelFavorite {
     private Integer status; // 收藏状态（0：取消收藏，1：已收藏）
 
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy年MM月dd日 HH时mm分", timezone = "GMT+8")
     private LocalDateTime createTime; // 收藏时间
 
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy年MM月dd日 HH时mm分", timezone = "GMT+8")
     private LocalDateTime updateTime; // 更新时间
 
 
@@ -37,4 +37,8 @@ public class HotelFavorite {
 
 
     private Integer hotelId; // 酒店ID
+
+    private String hotelName; // 酒店名称
+
+
 }

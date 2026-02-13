@@ -2,23 +2,33 @@ package com.navigation.service.impl;
 
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.navigation.context.BaseContext;
+import com.navigation.dto.TicketReservationWithScenicDTO;
+import com.navigation.entity.Scenic;
+import com.navigation.entity.ScenicFavorite;
 import com.navigation.entity.Ticket;
 import com.navigation.entity.TicketReservation;
+import com.navigation.handler.OrderWebSocketHandler;
 import com.navigation.mapper.TicketMapper;
 import com.navigation.mapper.TicketReservationMapper;
-import com.navigation.mapper.UserMapper;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.TicketReservationService;
+import com.navigation.utils.JsonUtils;
+import io.swagger.util.Json;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
@@ -36,15 +46,26 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
     @Resource
     private TicketReservationMapper ticketReservationMapper;
 
+
     @Resource
     private TicketMapper ticketMapper;
 
     @Autowired
     private Validator validator;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+
+    ObjectMapper objectMapper = JsonUtils.getObjectMapper();
+
+    @Autowired
+    private OrderWebSocketHandler orderWebSocketHandler; // 注入 OrderWebSocketHandler
+
+
+
     @Override
     @Transactional
-    public Result<Void> saveTicketReservation(TicketReservation ticketReservation) {
+    public Result<Integer> saveTicketReservation(TicketReservation ticketReservation) {
         // 参数校验
         if (ticketReservation == null) {
             log.error("传入的 TicketReservation 对象为空，无法保存景点预约信息");
@@ -52,7 +73,8 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
         }
 
         // 从UserHolder获取userId并设置到ticketReservation对象
-        Integer userId = 1; // BaseContext.getUserId();
+        Integer userId = 2; //
+        //Integer userId = BaseContext.getUserId();
         ticketReservation.setUserId(userId);
 
         // 检查用户是否存在
@@ -116,16 +138,26 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
             ticketReservation.setCreateTime(LocalDateTime.now());
             ticketReservation.setUpdateTime(LocalDateTime.now());
             ticketReservationMapper.saveTicketReservation(ticketReservation);
+            Integer reservationId = ticketReservation.getReservationId(); // 假设保存后会自动填充ID
 
+            handleOrderSuccess(userId);//实时推送
             // 更新门票库存
             ticket.setAvailability(stock - buyNumber);
             ticketMapper.updateTicketStock(ticket);
 
-            return Result.success();
+            return Result.success(reservationId);
         } catch (Exception e) {
             log.error("保存景点预约信息时出现异常", e);
             return Result.error("保存景点预约信息失败，请稍后重试");
         }
+    }
+
+
+
+    // 处理订单成功并推送消息，可以自定义构建返回的数据
+    public void handleOrderSuccess(Integer userId) {
+        String successMessage = "您的预约已成功！";
+        orderWebSocketHandler.sendMessageToUser(userId, successMessage);  // 调用 sendMessageToUser 向用户推送成功消息
     }
 
     @Override
@@ -145,7 +177,8 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
             }
 
             // 获取当前用户ID
-            Integer userId = 1; // BaseContext.getUserId();
+            //Integer userId = 1; //
+            Integer userId = BaseContext.getUserId();
             if (userId == null) {
                 log.error("用户未登录");
                 return Result.error("请先登录");
@@ -301,16 +334,64 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
 
     @Override
     public PageResult queryTicketReservation(Integer pageNum, Integer pageSize) {
-        // 设置分页参数
-        PageHelper.startPage(pageNum, pageSize);
-        List<TicketReservation> TicketList = ticketReservationMapper.queryTicketReservation(pageNum, pageSize);
-        //获取分页元数据（总记录数、总页数等）
-        Page list = (Page<TicketReservation>) TicketList;
-        PageResult pageResult = new PageResult(list.getTotal(), list.getResult());
-        return pageResult;
+        // 从BaseContext获取当前用户ID
+        Integer userId = BaseContext.getUserId();
+        //Integer userId = 1;
+        try {
+            // 设置分页参数
+            PageHelper.startPage(pageNum, pageSize);
+            // 根据用户ID查询票务预订记录
+            List<TicketReservation> ticketList = ticketReservationMapper.queryTicketReservationByUserId(userId, pageNum, pageSize);
+            Page<TicketReservation> pageInfo = (Page<TicketReservation>) ticketList;
+
+            // 转换为DTO并补充Redis数据
+            List<TicketReservationWithScenicDTO> dtoList = ticketList.stream().map(ticketReservation -> {
+                TicketReservationWithScenicDTO dto = new TicketReservationWithScenicDTO();
+                // 复制原有属性
+                BeanUtils.copyProperties(ticketReservation, dto);
+
+                Integer ticketId = ticketReservation.getTicketId();
+                Ticket ticket = ticketMapper.findTicketByTicketId(ticketId);
+                if (ticket != null) {
+                    Integer scenicSpotId = ticket.getScenicSpotId();
+                    dto.setScenicId(scenicSpotId);
+
+                    // 模糊查询Redis中的景点信息
+                    String pattern = "scenic:" + scenicSpotId + ":*";
+                    Set<String> keys = stringRedisTemplate.keys(pattern);
+                    if (keys.isEmpty()) {
+                        log.error("未在Redis中找到景点Id为 {} 的记录", scenicSpotId);
+                    } else {
+                        String key = keys.iterator().next();
+                        String scenicJson = stringRedisTemplate.opsForValue().get(key);
+                        if (scenicJson != null) {
+                            try {
+                                Scenic scenic = objectMapper.readValue(scenicJson, Scenic.class);
+                                if (scenic != null && scenic.getId() != null) {
+                                    dto.setScenicCover(scenic.getScenicCover());
+                                    dto.setScenicName(scenic.getScenicName());
+                                    dto.setScenicLocateDescription(scenic.getScenicLocateDescription());
+                                } else {
+                                    log.error("从Redis获取的景点数据不完整或格式错误，景点Id: {}", scenicSpotId);
+                                }
+                            } catch (Exception e) {
+                                log.error("解析Redis中的景点信息出错，景点Id: {}", scenicSpotId, e);
+                            }
+                        }
+                    }
+                }
+                return dto;
+            }).collect(Collectors.toList());
+
+            return new PageResult<>(pageInfo.getTotal(), dtoList);
+        } catch (Exception e) {
+            log.error("查询票务预订记录失败，userId: {}", userId, e);
+            throw new RuntimeException("查询票务预订记录失败，请稍后重试");
+        }
     }
 
-    @Override
+
+    /*@Override
     public Result<TicketReservation> queryTicketReservationById(Integer id) {
         if (id == null) {
             log.error("传入的景点预约ID为空");
@@ -328,7 +409,7 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
             log.error("根据id查询景点预约信息时发生异常", e);
             return Result.error("根据id查询景点预约信息失败，请稍后重试");
         }
-    }
+    }*/
 
     @Override
     public Result<Void> confirmPurchase(Integer reservationId) {

@@ -6,10 +6,11 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.ScenicReservationService;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
+
 import java.util.List;
 
 @Slf4j
@@ -44,10 +45,18 @@ public class ScenicReservationController {
         return scenicReservationService.queryScenicReservation(page,pageSize);
     }
 
-    @GetMapping("/queryById")
+    @GetMapping("/queryTop10")
+    public PageResult queryScenicReservationTop10(@RequestParam(defaultValue = "1") Integer page,
+                                  @RequestParam(defaultValue = "5") Integer pageSize){
+        //两个参数分别指：从第几页开始查，每页的个数有多少
+        return scenicReservationService.queryScenicReservationTop10(page,pageSize);
+    }
+
+
+    /*@GetMapping("/queryById")
     public Result<ScenicReservation> queryScenicReservationById(Integer id){
         return scenicReservationService.queryScenicReservationById(id);
-    }
+    }*/
 
 
 

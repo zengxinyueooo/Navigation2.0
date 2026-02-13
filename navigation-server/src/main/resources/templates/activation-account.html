@@ -25,14 +25,13 @@
             font-size: 16px;
             line-height: 1.6;
         }
-        .button {
-            display: inline-block;
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
+        .link-box {
+            background-color: #f9f9f9;
+            border: 1px dashed #ccc;
+            padding: 10px;
+            word-break: break-all;
+            font-family: monospace;
+            margin: 10px 0;
         }
         .footer {
             text-align: center;
@@ -50,16 +49,17 @@
     </div>
 
     <div class="content">
-        <p>亲爱的用户，</p>
-        <p>感谢您注册我们的系统！为了激活您的账户，请点击下面的链接：</p>
+        <p>亲爱的用户，</p >
+        <p>感谢您注册我们的系统！为了激活您的账户，请复制下面的链接：</p>
 
-        <a th:href="@{${activationUrl}}" class="button">点击激活账号</a>
+        <!-- 激活链接 -->
+        <a th:href="${activationUrl}" class="button"><span th:text="${activationUrl}"></span></a>
 
-        <p>如果您没有进行此操作，请忽略此邮件。</p>
+        <p>如果您没有进行此操作，请忽略此邮件。</p >
     </div>
 
     <div class="footer">
-        <p>&copy; 2025 我们的系统</p>
+        <p>&copy; 2025 我们的系统</p >
     </div>
 </div>
 

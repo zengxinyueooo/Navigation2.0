@@ -17,6 +17,8 @@ public interface TicketService extends IService<Ticket> {
 
     Result<List<Ticket>> queryByScenicId(Integer id);
 
+    Result<List<Ticket>> queryByScenicName(String name);
+
 
     Result<Ticket> queryTicketById(Integer ticketId);
 

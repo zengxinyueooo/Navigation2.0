@@ -17,7 +17,7 @@ public class JsonUtils {
         objectMapper = new ObjectMapper();
         JavaTimeModule module = new JavaTimeModule();
         // 定义LocalDateTime的序列化格式
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH时mm分")
                 .withZone(ZoneId.systemDefault());
         LocalDateTimeSerializer localDateTimeSerializer = new LocalDateTimeSerializer(dateTimeFormatter);
         module.addSerializer(LocalDateTime.class, localDateTimeSerializer);

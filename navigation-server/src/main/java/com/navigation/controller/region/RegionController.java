@@ -7,10 +7,11 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.RegionService;
 
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
+
 import java.util.List;
 
 @Slf4j
@@ -50,6 +51,12 @@ public class RegionController {
     @GetMapping("/queryById")
     public Result<Region> queryRegionById(Integer id){
         return regionService.queryRegionById(id);
+    }
+
+    @GetMapping("/queryByName")
+    public Result<List<Region>> queryScenicByName(@RequestParam String name){
+
+        return regionService.queryScenicByName(name);
     }
 
 }

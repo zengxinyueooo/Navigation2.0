@@ -1,13 +1,15 @@
 package com.navigation.controller.favorite;
 
 import com.navigation.entity.ScenicFavorite;
+import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.ScenicFavoriteService;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 
-import javax.annotation.Resource;
+
 import java.util.List;
 
 @Slf4j
@@ -32,22 +34,33 @@ public class ScenicFavoriteController {
     }
 
     // 根据用户ID和景点ID查询是否已收藏
-    @GetMapping("/isFavorite/{userId}/{scenicId}")
-    public boolean isScenicFavorite(@PathVariable Integer userId, @PathVariable Integer scenicId) {
-        return scenicFavoriteService.isScenicFavorite(userId, scenicId);
+    @GetMapping("/isFavorite/{scenicId}")
+    public Result<Integer> isScenicFavorite(@PathVariable Integer scenicId) {
+        return scenicFavoriteService.isScenicFavorite(scenicId);
     }
 
     // 根据用户ID和景点ID查询该景点收藏信息
-    @GetMapping("/info/{userId}/{scenicId}")
-    public Result<ScenicFavorite> getFavoriteInfo(
-            @PathVariable Integer userId,
-            @PathVariable Integer scenicId) {
-        return scenicFavoriteService.getFavoriteInfoByUserIdAndScenicId(userId, scenicId);
+    @GetMapping("/info/{scenicId}")
+    public Result<ScenicFavorite> getFavoriteInfo(@PathVariable Integer scenicId) {
+        return scenicFavoriteService.getFavoriteInfoByUserIdAndScenicId(scenicId);
+    }
+
+    // 根据用户ID和景点名称查询该景点收藏信息
+    @GetMapping("/info/name/{scenicName}")
+    public Result<List<ScenicFavorite>> getFavoriteInfoByName(@PathVariable String scenicName) {
+        return scenicFavoriteService.getFavoriteInfoByUserIdAndScenicName(scenicName);
+    }
+
+    @GetMapping("/queryPage")
+    public PageResult queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
+                                          @RequestParam(defaultValue = "5") Integer pageSize){
+        //两个参数分别指：从第几页开始查，每页的个数有多少
+        return scenicFavoriteService.queryPageByUserId(page,pageSize);
     }
 
     // 根据用户ID查询该用户的所有收藏景点记录
-    @GetMapping("/user/{userId}")
+    /*@GetMapping("/user/{userId}")
     public Result<List<ScenicFavorite>> getScenicFavoritesByUserId(@PathVariable Integer userId) {
         return scenicFavoriteService.getScenicFavoritesByUserId(userId);
-    }
+    }*/
 }

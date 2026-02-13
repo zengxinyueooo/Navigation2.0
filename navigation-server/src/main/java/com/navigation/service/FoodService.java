@@ -5,7 +5,7 @@ import com.navigation.entity.Food;
 import com.navigation.entity.Food;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
-import lombok.var;
+
 
 import java.util.List;
 
@@ -22,4 +22,6 @@ public interface FoodService extends IService<Food> {
     Result<Food> queryFoodById(Integer id);
 
     Result<List<Food>> queryFoodByRegionId(Integer id);
+
+    Result<List<Food>> findByRegion(String region);
 }

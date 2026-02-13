@@ -9,12 +9,14 @@ import com.github.pagehelper.PageHelper;
 import com.navigation.entity.Region;
 
 
+import com.navigation.entity.Scenic;
 import com.navigation.mapper.RegionMapper;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.RegionService;
 
 import com.navigation.utils.JsonUtils;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
@@ -22,7 +24,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -367,6 +369,34 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
             String regionJson = stringRedisTemplate.opsForValue().get(key);
             Region region = JsonUtils.fromJson(regionJson, Region.class);
             return Result.success(region);
+        } catch (Exception e) {
+            log.error("将Redis获取的JSON数据反序列化为Region对象时出错，错误信息: {}", e.getMessage());
+            return Result.error("查询地区信息时出现异常: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Result<List<Region>> queryScenicByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            log.error("传入的地区名称为空");
+            return Result.error("传入的地区名称为空");
+        }
+
+        // 构建匹配键的模式
+        String pattern = "region:*:*" + name + "*";
+        Set<String> keys = stringRedisTemplate.keys(pattern);
+        if (keys.isEmpty()) {
+            return Result.error("未找到对应地区");
+        }
+
+        List<Region> regionList = new ArrayList<>();
+        try {
+            for (String key : keys) {
+                String regionJson = stringRedisTemplate.opsForValue().get(key);
+                Region region = JsonUtils.fromJson(regionJson, Region.class);
+                regionList.add(region);
+            }
+            return Result.success(regionList);
         } catch (Exception e) {
             log.error("将Redis获取的JSON数据反序列化为Region对象时出错，错误信息: {}", e.getMessage());
             return Result.error("查询地区信息时出现异常: " + e.getMessage());

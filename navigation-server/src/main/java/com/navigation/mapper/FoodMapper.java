@@ -42,4 +42,7 @@ public interface FoodMapper extends BaseMapper<Food> {
     List<Integer> getAllExistingIds();
 
 
+    // 根据地区查询美食信息（不包括价格）
+    @Select("SELECT * FROM food WHERE region_id IN (SELECT region_id FROM region WHERE region_name = #{region})")
+    List<Food> findByRegion(@Param("region") String region);
 }

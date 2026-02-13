@@ -3,7 +3,7 @@ package com.navigation.context;
 //存储和管理一些基础的上下文信息
 //存储用户信息 方便取出
 
-import io.swagger.models.auth.In;
+
 
 public class BaseContext {
 

@@ -22,10 +22,10 @@ public interface TicketMapper extends BaseMapper<Ticket> {
     int batchDelete(@Param("ids") List<Integer> ids);
 
 
-    @Select("select * from Ticket where id = #{id}")
+    @Select("select * from ticket where id = #{id}")
     Ticket queryTicketById(Integer id);
 
-    @Select("select * from Ticket where scenic_spot_id = #{scenicSpotId}")
+    @Select("select * from ticket where scenic_spot_id = #{scenicSpotId}")
     List<Ticket> queryTicketByScenicId(Integer id);
 
     @Update("UPDATE ticket " +
@@ -49,4 +49,16 @@ public interface TicketMapper extends BaseMapper<Ticket> {
 
     @Select("select * from ticket")
     List<Ticket> queryTicket(Integer pageNum, Integer pageSize);
+
+    @Select("SELECT " +
+            "scenic_spot_id " +
+            "FROM " +
+            "ticket " +
+            "WHERE " +
+            "id = #{ticketId}")
+    Ticket findTicketByTicketId(Integer ticketId);
+
+    // 根据景点名称查询票务信息
+    @Select("SELECT * FROM ticket WHERE scenic_spot_id IN (SELECT id FROM scenic WHERE scenic_name = #{name})")
+    List<Ticket> queryByScenicName(@Param("name") String name);
 }

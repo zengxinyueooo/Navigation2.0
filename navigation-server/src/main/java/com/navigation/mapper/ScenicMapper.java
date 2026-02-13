@@ -40,4 +40,8 @@ public interface ScenicMapper extends BaseMapper<Scenic> {
 
     @Select("SELECT COUNT(1) FROM scenic WHERE id = #{id}")
     int countScenicById(Integer scenicId);
+
+    @Select("SELECT * FROM scenic WHERE region_id = (SELECT region_id FROM region WHERE region_name = #{regionName}) LIMIT #{pageSize} OFFSET #{offset}")
+    List<Scenic> queryPageByRegionName(@Param("regionName") String regionName, @Param("pageSize") int pageSize, @Param("offset") int offset);
+
 }

@@ -2,10 +2,11 @@ package com.navigation.dto;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
+
 
 /**
  * 数据传输对象（DTO）
@@ -22,4 +23,6 @@ public class LoginDto {
     @ApiModelProperty(value = "密码", required = true)
     @NotBlank(message = "密码不能为空")
     private String password;  // 用户登录密码
+
+    private String role;
 }

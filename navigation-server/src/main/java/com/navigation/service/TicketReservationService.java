@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface TicketReservationService extends IService<TicketReservation> {
 
-    Result<Void> saveTicketReservation(TicketReservation ticketReservation);
+    Result<Integer> saveTicketReservation(TicketReservation ticketReservation);
 
     Result<Void> update(TicketReservation ticketReservation);
 
@@ -18,7 +18,7 @@ public interface TicketReservationService extends IService<TicketReservation> {
     PageResult queryTicketReservation(Integer pageNum, Integer pageSize);
 
 
-    Result<TicketReservation> queryTicketReservationById(Integer id);
+    //Result<TicketReservation> queryTicketReservationById(Integer id);
 
     Result<Void> confirmPurchase(Integer reservationId);
 }

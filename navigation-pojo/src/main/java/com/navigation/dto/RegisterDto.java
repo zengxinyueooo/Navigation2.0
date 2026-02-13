@@ -2,10 +2,11 @@ package com.navigation.dto;
 
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
@@ -39,12 +40,9 @@ public class RegisterDto {
     @NotBlank(message = "性别不能为空")
     private String gender;
 
-    @ApiModelProperty(value = "确认码", required = false)
-    private String confirmCode;  // 确认码
+    private String role;
 
-    @ApiModelProperty(value = "激活失效时间", required = false)
-    private LocalDateTime activationTime;  // 激活失效时间
-
-    @ApiModelProperty(value = "账号是否有效", required = false)
-    private Integer isValid;  // 是否有效
+    private String confirmCode;  // 激活码
+    private LocalDateTime activationTime;  // 激活时间
+    private int isValid;  // 账户是否有效（0 表示无效，1 表示有效）
 }

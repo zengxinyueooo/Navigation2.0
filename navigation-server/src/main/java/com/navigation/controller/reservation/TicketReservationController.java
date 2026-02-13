@@ -4,10 +4,11 @@ import com.navigation.entity.TicketReservation;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.TicketReservationService;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
+
 import java.util.List;
 
 @Slf4j
@@ -20,7 +21,7 @@ public class TicketReservationController {
     private TicketReservationService ticketReservationService;
 
     @PostMapping("/save")
-    public Result<Void> saveTicketReservation(@RequestBody TicketReservation ticketReservation){
+    public Result<Integer> saveTicketReservation(@RequestBody TicketReservation ticketReservation){
 
         return ticketReservationService.saveTicketReservation(ticketReservation);
     }
@@ -42,10 +43,10 @@ public class TicketReservationController {
         return ticketReservationService.queryTicketReservation(page,pageSize);
     }
 
-    @GetMapping("/queryById")
+    /*@GetMapping("/queryById")
     public Result<TicketReservation> queryTicketReservationById(Integer id){
         return ticketReservationService.queryTicketReservationById(id);
-    }
+    }*/
 
     @PostMapping("/confirmPurchase/{reservationId}")
     public Result<Void> confirmPurchase(@PathVariable Integer reservationId) {

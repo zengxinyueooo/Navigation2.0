@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.navigation.context.BaseContext;
+import com.navigation.dto.ScenicReservationDTO;
 import com.navigation.entity.Scenic;
 import com.navigation.entity.ScenicReservation;
 
@@ -17,20 +18,19 @@ import com.navigation.result.Result;
 import com.navigation.service.ScenicReservationService;
 import com.navigation.service.ScenicService;
 import com.navigation.utils.JsonUtils;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
+
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,8 +60,9 @@ public class ScenicReservationServiceImpl extends ServiceImpl<ScenicReservationM
 
         // 从UserHolder获取userId并设置到scenicReservation对象
         Integer userId = BaseContext.getUserId();
+        //Integer userId = 1;
         scenicReservation.setUserId(userId);
-        //scenicReservation.setUserId(1);
+
 
         if (scenicReservation.getScenicId() == null) {
             log.error("景点ID为空，无法保存景点预约信息");
@@ -254,9 +255,11 @@ public class ScenicReservationServiceImpl extends ServiceImpl<ScenicReservationM
 
     @Override
     public PageResult queryScenicReservation(Integer pageNum, Integer pageSize) {
+        // 从BaseContext获取当前用户ID
+        Integer userId = BaseContext.getUserId();
         // 设置分页参数
         PageHelper.startPage(pageNum, pageSize);
-        List<ScenicReservation> scenicList = scenicReservationMapper.queryScenicReservation(pageNum, pageSize);
+        List<ScenicReservation> scenicList = scenicReservationMapper.queryScenicReservation(userId, pageNum, pageSize);
         //获取分页元数据（总记录数、总页数等）
         Page list = (Page<ScenicReservation>) scenicList;
         PageResult pageResult = new PageResult(list.getTotal(), list.getResult());
@@ -264,6 +267,61 @@ public class ScenicReservationServiceImpl extends ServiceImpl<ScenicReservationM
     }
 
     @Override
+    public PageResult queryScenicReservationTop10(Integer page, Integer pageSize) {
+        // 1. 参数校验
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
+        }
+
+        // 2. 从MySQL查询预约人数排名（只返回scenic_id和人数）
+        List<Map<String, Object>> reservationRank = scenicReservationMapper.selectReservationRank(
+                (page - 1) * pageSize,
+                pageSize
+        );
+        if (reservationRank == null || reservationRank.isEmpty()) {
+            return new PageResult(0L, Collections.emptyList());
+        }
+
+        // 3. 批量从Redis获取景点信息
+        List<ScenicReservationDTO> resultList = new ArrayList<>();
+        for (Map<String, Object> item : reservationRank) {
+            Integer scenicId = (Integer) item.get("scenic_id");
+            Long totalPeople = ((Number) item.get("total_people")).longValue();
+
+            // 3.1 扫描Redis获取景点Key
+            Set<String> scenicKeys = stringRedisTemplate.keys("scenic:" + scenicId + ":*");
+            if (scenicKeys == null || scenicKeys.isEmpty()) {
+                resultList.add(new ScenicReservationDTO(scenicId, "未知景点", totalPeople, ""));
+                continue;
+            }
+
+            // 3.2 获取景点完整信息
+            String scenicJson = stringRedisTemplate.opsForValue().get(scenicKeys.iterator().next());
+            try {
+                Scenic scenic = JsonUtils.fromJson(scenicJson, Scenic.class);
+                resultList.add(new ScenicReservationDTO(
+                        scenicId,
+                        scenic.getScenicName(),
+                        totalPeople,
+                        scenic.getScenicCover() // 新增封面路径
+                ));
+            } catch (Exception e) {
+                log.error("解析Redis景点数据失败，scenicId: {}", scenicId, e);
+                resultList.add(new ScenicReservationDTO(scenicId, "数据异常", totalPeople, ""));
+            }
+        }
+
+        // 4. 获取总景点数（用于分页）
+        Long total = scenicReservationMapper.countDistinctScenicIds();
+        return new PageResult(total, resultList);
+    }
+
+
+
+   /* @Override
     public Result<ScenicReservation> queryScenicReservationById(Integer id) {
         if (id == null) {
             log.error("传入的景点预约ID为空");
@@ -281,7 +339,7 @@ public class ScenicReservationServiceImpl extends ServiceImpl<ScenicReservationM
             log.error("根据id查询景点预约信息时发生异常", e);
             return Result.error("根据id查询景点预约信息失败，请稍后重试");
         }
-    }
+    }*/
 
 
 }
