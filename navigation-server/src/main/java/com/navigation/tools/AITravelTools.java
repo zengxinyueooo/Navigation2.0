@@ -1,4 +1,3 @@
-/*
 package com.navigation.tools;
 
 import com.navigation.entity.Food;
@@ -12,6 +11,9 @@ import com.navigation.service.FoodService;
 import com.navigation.service.HotelService;
 import com.navigation.service.ScenicService;
 import com.navigation.service.TicketService;
+
+import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.P;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,7 +40,7 @@ public class AITravelTools {
 
 
     // ================= 工具 1：查询景点信息 =================
-    @Tool("查询景点详细信息，包括介绍、位置、开放时间、门票价格等")
+    @Tool("查询景点详细信息,包括介绍、位置、开放时间、门票价格等")
     public String searchScenicSpot(@P("景点名称") String scenicName) {
         Result<List<Scenic>> result = scenicService.queryScenicByName(scenicName);
 
@@ -95,7 +97,7 @@ public class AITravelTools {
 
 
     // ================= 工具 3：查询酒店 =================
-    @Tool("查询酒店信息，可以输入酒店名或地区")
+    @Tool("查询酒店信息,可以输入酒店名或地区")
     public String searchHotels(@P("酒店名称或地区") String query) {
         Result<List<Hotel>> result = hotelService.searchHotels(query);
 
@@ -125,4 +127,4 @@ public class AITravelTools {
     }
 
 
-}*/
+}

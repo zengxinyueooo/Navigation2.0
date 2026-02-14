@@ -1,7 +1,8 @@
 package com.navigation.service;
 
 import jakarta.annotation.Resource;
-import jakarta.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage;
+import javax.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -9,8 +10,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-
-import javax.mail.MessagingException;
 import java.util.Date;
 
 @Service
@@ -44,7 +43,7 @@ public class MailService {
             // 设置邮件正文（HTML 格式）
             message.setText(text, true);
 
-        } catch (jakarta.mail.MessagingException e) {
+        } catch (MessagingException e) {
             throw new RuntimeException("邮件发送失败", e);
         }
 

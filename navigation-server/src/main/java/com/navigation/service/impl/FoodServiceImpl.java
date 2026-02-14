@@ -246,7 +246,6 @@ public class FoodServiceImpl extends ServiceImpl<FoodMapper, Food> implements Fo
         }
     }
 
-    @Override
     public Result<List<Food>> findByRegion(String region) {
         // 查询美食数据
         List<Food> foods = foodMapper.findByRegion(region);

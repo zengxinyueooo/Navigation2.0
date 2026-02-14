@@ -9,36 +9,16 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <packaging>jar</packaging>
-
     <artifactId>navigation-server</artifactId>
     <properties>
-        <!-- 指定 Spring Boot 主类 -->
-        <start-class>com.navigation.NavigationApplication</start-class>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
         <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>javax.mail-api</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.mail</groupId>
-            <artifactId>javax.mail</artifactId>
-            <version>1.6.2</version>
-        </dependency>
-
-
-
-
-        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-            <version>3.2.6</version>
         </dependency>
 
         <dependency>
@@ -53,18 +33,10 @@
             <version>3.4.3</version>
         </dependency>
 
-        <!--<dependency>
+        <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
-        </dependency>-->
-
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
-            <version>4.0.0</version>
         </dependency>
-
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -107,9 +79,8 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
         </dependency>
 
         <dependency>
@@ -136,11 +107,10 @@
             <version>5.7.17</version>
         </dependency>
 
-        <!-- Hibernate 核心依赖 -->
+        <!-- Hibernate 核心依赖 - 使用与Spring Boot 2.7兼容的版本 -->
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-core</artifactId>
-            <version>6.2.7.Final</version>
         </dependency>
 
         <!--利用 Java 的 Bean Validation 规范来校验 Food 对象中的必填字段，这样代码会更加简洁和规范-->
@@ -180,108 +150,93 @@
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.13.0</version>
         </dependency>
 
-
-        <!-- 分页插件 -->
+        <!-- LangChain4J Core -->
         <dependency>
-            <groupId>com.github.pagehelper</groupId>
-            <artifactId>pagehelper-spring-boot-starter</artifactId>
-            <version>1.4.2</version>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
+            <version>0.30.0</version>
         </dependency>
 
-        <!-- 用于方便地发送HTTP请求到AI API -->
+        <!-- LangChain4J Spring Boot Starter -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-spring-boot-starter</artifactId>
+            <version>0.30.0</version>
         </dependency>
 
-
-
+        <!-- LangChain4J OpenAI (支持兼容OpenAI API的模型) -->
         <dependency>
-            <groupId>org.apache.httpcomponents.client5</groupId>
-            <artifactId>httpclient5</artifactId>
-            <version>5.2.1</version>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-open-ai</artifactId>
+            <version>0.30.0</version>
         </dependency>
 
-
-
+        <!-- LangChain4J Redis Store -->
         <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>1.2.83</version>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-redis</artifactId>
+            <version>0.30.0</version>
         </dependency>
 
-        <!-- SSE相关依赖 -->
+        <!-- Jedis - Redis Java client required by langchain4j-redis -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-webflux</artifactId>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.0.2</version>
         </dependency>
 
-        <!-- Spring WebSocket 核心依赖 -->
+        <!-- LangChain4J Embeddings -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-embeddings</artifactId>
+            <version>0.30.0</version>
+        </dependency>
+
+        <!-- Apache HttpClient 4.x (与Spring Boot 2.7兼容) -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+
+        <!-- WebSocket -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-        <!--langchain4j起步依赖-->
-       <!-- <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-open-ai-spring-boot-starter</artifactId>
-            <version>1.0.1-beta6</version>
-        </dependency>
-        &lt;!&ndash;AiServices相关的依赖&ndash;&gt;
+        <!-- JSR-250 annotations (@Resource) - Jakarta version -->
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-spring-boot-starter</artifactId>
-            <version>1.0.1-beta6</version>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+            <version>2.1.1</version>
         </dependency>
 
+        <!-- Java Mail (Spring Boot 2.7 uses javax.mail, not jakarta.mail) -->
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-reactor</artifactId>
-            <version>1.0.1-beta6</version>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
         </dependency>
 
-        &lt;!&ndash;rag-easy依赖&ndash;&gt;
+        <!-- Jakarta Persistence (JPA) -->
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-easy-rag</artifactId>
-            <version>1.0.1-beta6</version>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <version>3.0.0</version>
         </dependency>
 
-        &lt;!&ndash;pdf解析器依赖&ndash;&gt;
+        <!-- WebFlux for WebClient (用于SSE流式调用) -->
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-document-parser-apache-pdfbox</artifactId>
-            <version>1.0.1-beta6</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
-        &lt;!&ndash;引入langchain4j对于redis向量数据库的支持&ndash;&gt;
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j-community-redis-spring-boot-starter</artifactId>
-            <version>1.0.1-beta6</version>
-        </dependency>-->
-        
 
     </dependencies>
 
 
-    <repositories>
-        <!-- 优先从中央仓库下载 -->
-        <repository>
-            <id>central</id>
-            <name>Central Repository</name>
-            <url>https://repo.maven.apache.org/maven2</url>
-        </repository>
-        <!-- 其次从阿里云仓库下载 -->
-        <repository>
-            <id>aliyunmaven</id>
-            <name>阿里云公共仓库</name>
-            <url>https://maven.aliyun.com/repository/public</url>
-        </repository>
-    </repositories>
 
     <build>
         <plugins>
@@ -289,15 +244,13 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.navigation.NavigationApplication</mainClass>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal> <!-- 生成可执行 JAR -->
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -305,8 +258,13 @@
                 <configuration>
                     <source>17</source>
                     <target>17</target>
-                    <encoding>UTF-8</encoding>
-
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.34</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>

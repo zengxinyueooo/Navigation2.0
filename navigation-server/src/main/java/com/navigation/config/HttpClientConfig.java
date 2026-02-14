@@ -1,10 +1,9 @@
 package com.navigation.config;
 
-import org.apache.hc.client5.http.classic.HttpClient;
-import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
-import org.apache.hc.core5.util.Timeout;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -29,9 +28,9 @@ public class HttpClientConfig {
     @Bean
     public RequestConfig requestConfig() {
         return RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(5000))
-                .setConnectionRequestTimeout(Timeout.ofMilliseconds(5000))
-                .setResponseTimeout(Timeout.ofMilliseconds(10000))
+                .setConnectTimeout(5000)
+                .setConnectionRequestTimeout(5000)
+                .setSocketTimeout(10000)
                 .build();
     }
 

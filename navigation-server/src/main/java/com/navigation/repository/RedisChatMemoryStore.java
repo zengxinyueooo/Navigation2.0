@@ -1,4 +1,3 @@
-/*
 package com.navigation.repository;
 
 import dev.langchain4j.data.message.ChatMessage;
@@ -40,4 +39,3 @@ public class RedisChatMemoryStore implements ChatMemoryStore {
         redisTemplate.delete(memoryId.toString());
     }
 }
-*/
