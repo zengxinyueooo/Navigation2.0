@@ -15,6 +15,7 @@ import com.navigation.service.TicketService;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.P;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service("aiTravelTools")  // Bean 名称要和 AiService 注解的 tools 对应
 public class AITravelTools {
 
@@ -81,6 +83,10 @@ public class AITravelTools {
     // ================= 工具 2：推荐景点 =================
     @Tool("根据地区推荐合适的景点")
     public String recommendScenics(@P("地区名称") String regionName) {
+        // 添加调试日志
+        log.info("[AITravelTools] recommendScenics被调用 | regionName={} | scenicService={}",
+            regionName, (scenicService != null ? scenicService.getClass().getName() : "NULL"));
+
         // 调用查询方法，获取景点列表
         Result<List<Scenic>> result = scenicService.queryPageByRegionName(1, 10, regionName);
 
