@@ -477,26 +477,34 @@ public class ChatStreamService {
      */
     private String executeToolCall(String toolName, String argumentsJson) {
         try {
-            log.info("[ChatStreamService] 开始执行工具 | tool={} | args={} | aiTravelTools={}",
-                toolName, argumentsJson, (aiTravelTools != null ? "已注入" : "NULL"));
+            log.info("[ChatStreamService] 开始执行工具 | tool={} | args={} | aiTravelTools={} | aiTravelTools类型={}",
+                toolName, argumentsJson,
+                (aiTravelTools != null ? "已注入" : "NULL"),
+                (aiTravelTools != null ? aiTravelTools.getClass().getName() : "NULL"));
 
             JSONObject args = JSON.parseObject(argumentsJson);
 
             switch (toolName) {
                 case "searchScenicSpot":
                     String scenicName = args.getString("scenicName");
-                    return aiTravelTools.searchScenicSpot(scenicName);
+                    log.info("[ChatStreamService] 调用searchScenicSpot | scenicName={}", scenicName);
+                    String result = aiTravelTools.searchScenicSpot(scenicName);
+                    log.info("[ChatStreamService] searchScenicSpot返回 | result={}", result);
+                    return result;
 
                 case "recommendScenics":
                     String regionName = args.getString("regionName");
+                    log.info("[ChatStreamService] 调用recommendScenics | regionName={}", regionName);
                     return aiTravelTools.recommendScenics(regionName);
 
                 case "searchHotels":
                     String query = args.getString("query");
+                    log.info("[ChatStreamService] 调用searchHotels | query={}", query);
                     return aiTravelTools.searchHotels(query);
 
                 case "recommendFoods":
                     String region = args.getString("region");
+                    log.info("[ChatStreamService] 调用recommendFoods | region={}", region);
                     return aiTravelTools.recommendFoods(region);
 
                 default:

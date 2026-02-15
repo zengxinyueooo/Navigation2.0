@@ -16,7 +16,7 @@ import com.navigation.result.Result;
 import com.navigation.service.RegionService;
 
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
@@ -35,10 +35,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> implements RegionService {
 
-    @Resource
+    @Autowired
     private RegionMapper regionMapper;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     // 获取自增的regionId
@@ -382,25 +382,45 @@ public class RegionServiceImpl extends ServiceImpl<RegionMapper, Region> impleme
             return Result.error("传入的地区名称为空");
         }
 
-        // 构建匹配键的模式
-        String pattern = "region:*:*" + name + "*";
-        Set<String> keys = stringRedisTemplate.keys(pattern);
-        if (keys.isEmpty()) {
+        log.info("[RegionServiceImpl] 开始查询地区 | name={}", name);
+
+        // 使用SCAN遍历所有region keys
+        String pattern = "region:*:*";
+        ScanOptions scanOptions = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(1000)
+                .build();
+
+        List<Region> regionList = new ArrayList<>();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                log.debug("[RegionServiceImpl] 扫描到key: {}", key);
+
+                String regionJson = stringRedisTemplate.opsForValue().get(key);
+                if (regionJson != null) {
+                    Region region = JsonUtils.fromJson(regionJson, Region.class);
+                    if (region != null && region.getRegionName() != null) {
+                        // 模糊匹配地区名称
+                        if (region.getRegionName().contains(name)) {
+                            log.info("[RegionServiceImpl] 找到匹配地区 | regionName={}", region.getRegionName());
+                            regionList.add(region);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[RegionServiceImpl] 查询地区失败 | name={} | error={}", name, e.getMessage(), e);
+            return Result.error("查询地区信息时出现异常: " + e.getMessage());
+        }
+
+        if (regionList.isEmpty()) {
+            log.warn("[RegionServiceImpl] 未找到匹配地区 | name={}", name);
             return Result.error("未找到对应地区");
         }
 
-        List<Region> regionList = new ArrayList<>();
-        try {
-            for (String key : keys) {
-                String regionJson = stringRedisTemplate.opsForValue().get(key);
-                Region region = JsonUtils.fromJson(regionJson, Region.class);
-                regionList.add(region);
-            }
-            return Result.success(regionList);
-        } catch (Exception e) {
-            log.error("将Redis获取的JSON数据反序列化为Region对象时出错，错误信息: {}", e.getMessage());
-            return Result.error("查询地区信息时出现异常: " + e.getMessage());
-        }
+        log.info("[RegionServiceImpl] 查询成功 | name={} | 找到{}个地区", name, regionList.size());
+        return Result.success(regionList);
     }
 
    /* public Result<Region> queryRegionById(Integer id) {

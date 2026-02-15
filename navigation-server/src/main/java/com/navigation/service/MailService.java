@@ -1,6 +1,6 @@
 package com.navigation.service;
 
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import javax.mail.internet.MimeMessage;
 import javax.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,10 +17,10 @@ public class MailService {
     @Value("${spring.mail.username}")
     private String mailUsername;
 
-    @Resource
+    @Autowired
     private JavaMailSender javaMailSender;
 
-    @Resource
+    @Autowired
     private TemplateEngine templateEngine;  // 使用 Thymeleaf 的 TemplateEngine
 
     public void sendMailForActivationAccount(String activationUrl, String email) {

@@ -7,7 +7,7 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.RegionService;
 
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,7 +20,7 @@ import java.util.List;
 @RequestMapping("/region")
 public class RegionController {
 
-    @Resource
+    @Autowired
     private RegionService regionService;
 
     @PostMapping("/save")

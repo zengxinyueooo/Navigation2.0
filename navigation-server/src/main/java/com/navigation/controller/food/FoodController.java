@@ -4,7 +4,7 @@ import com.navigation.entity.Food;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.FoodService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +17,7 @@ import java.util.List;
 @RequestMapping("/food")
 public class FoodController {
 
-    @Resource
+    @Autowired
     private FoodService foodService;
 
     @PostMapping("/save")

@@ -4,7 +4,7 @@ import com.navigation.entity.ScenicFavorite;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.ScenicFavoriteService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/scenic/favorite")
 public class ScenicFavoriteController {
 
-    @Resource
+    @Autowired
     private ScenicFavoriteService scenicFavoriteService;
 
 

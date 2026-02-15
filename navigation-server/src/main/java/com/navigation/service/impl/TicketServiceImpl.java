@@ -13,7 +13,7 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.TicketService;
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,13 +36,13 @@ import java.util.stream.Collectors;
 public class TicketServiceImpl extends ServiceImpl<TicketMapper, Ticket> implements TicketService {
 
 
-    @Resource
+    @Autowired
     private TicketMapper ticketMapper;
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
 

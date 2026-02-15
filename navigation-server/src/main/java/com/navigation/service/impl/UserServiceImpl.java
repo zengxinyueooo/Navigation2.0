@@ -13,7 +13,7 @@ import com.navigation.result.Result;
 import com.navigation.service.MailService;
 import com.navigation.service.UserService;
 import com.navigation.utils.JwtUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.xmlbeans.impl.piccolo.util.DuplicateKeyException;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +35,7 @@ import static com.navigation.constant.MessageConstant.USER_NICK_NAME_PREFIX;
 @Service
 public class UserServiceImpl implements UserService {
 
-    @Resource
+    @Autowired
     private MailService mailService;
 
     private UserMapper userMapper;

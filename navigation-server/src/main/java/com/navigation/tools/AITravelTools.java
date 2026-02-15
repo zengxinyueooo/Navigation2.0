@@ -44,7 +44,14 @@ public class AITravelTools {
     // ================= 工具 1：查询景点信息 =================
     @Tool("查询景点详细信息,包括介绍、位置、开放时间、门票价格等")
     public String searchScenicSpot(@P("景点名称") String scenicName) {
+        log.info("[AITravelTools] searchScenicSpot被调用 | scenicName={} | scenicService={} | scenicService类型={}",
+            scenicName,
+            (scenicService != null ? "已注入" : "NULL"),
+            (scenicService != null ? scenicService.getClass().getName() : "NULL"));
+
         Result<List<Scenic>> result = scenicService.queryScenicByName(scenicName);
+
+        log.info("[AITravelTools] queryScenicByName返回 | result={}", (result != null ? "非空" : "NULL"));
 
         if (result == null || result.getData() == null || result.getData().isEmpty()) {
             return "未找到景点：" + scenicName + "，请提供完整的景点名称。";

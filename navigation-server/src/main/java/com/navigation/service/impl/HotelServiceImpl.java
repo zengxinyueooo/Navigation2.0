@@ -15,7 +15,7 @@ import com.navigation.result.Result;
 import com.navigation.service.HotelService;
 
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +35,13 @@ import java.util.stream.Collectors;
 @Slf4j
 public class HotelServiceImpl extends ServiceImpl<HotelMapper, Hotel> implements HotelService {
 
-    @Resource
+    @Autowired
     private HotelMapper hotelMapper;
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     @Override

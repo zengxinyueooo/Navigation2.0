@@ -20,7 +20,7 @@ import com.navigation.result.Result;
 import com.navigation.service.TicketReservationService;
 import com.navigation.utils.JsonUtils;
 import io.swagger.util.Json;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,17 +43,17 @@ import java.util.stream.Collectors;
 public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationMapper, TicketReservation> implements TicketReservationService {
 
 
-    @Resource
+    @Autowired
     private TicketReservationMapper ticketReservationMapper;
 
 
-    @Resource
+    @Autowired
     private TicketMapper ticketMapper;
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     ObjectMapper objectMapper = JsonUtils.getObjectMapper();

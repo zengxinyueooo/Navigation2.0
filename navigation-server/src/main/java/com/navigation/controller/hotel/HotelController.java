@@ -5,7 +5,7 @@ import com.navigation.entity.Hotel;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.HotelService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,7 +18,7 @@ import java.util.List;
 @RequestMapping("/hotel")
 public class HotelController {
 
-    @Resource
+    @Autowired
     private HotelService hotelService;
 
     @PostMapping("/save")

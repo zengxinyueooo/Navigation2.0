@@ -13,7 +13,7 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.HotelFavoriteService;
 
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ public class HotelFavoriteServiceImpl implements HotelFavoriteService {
 
     private final HotelFavoriteMapper hotelFavoriteMapper;
 
-    @Resource
+    @Autowired
     private HotelMapper hotelMapper;
 
     public HotelFavoriteServiceImpl(HotelFavoriteMapper hotelFavoriteMapper) {

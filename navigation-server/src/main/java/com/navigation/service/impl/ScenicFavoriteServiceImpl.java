@@ -15,7 +15,7 @@ import com.navigation.mapper.ScenicMapper;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.ScenicFavoriteService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,11 +36,11 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ScenicFavoriteServiceImpl implements ScenicFavoriteService {
 
-    @Resource
+    @Autowired
     private ScenicFavoriteMapper scenicFavoriteMapper;
 
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     @Override

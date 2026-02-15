@@ -6,7 +6,7 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.RegionService;
 import com.navigation.service.TicketService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +19,7 @@ import java.util.List;
 @RequestMapping("/ticket")
 public class TicketController {
 
-    @Resource
+    @Autowired
     private TicketService ticketService;
 
     @PostMapping("/save")

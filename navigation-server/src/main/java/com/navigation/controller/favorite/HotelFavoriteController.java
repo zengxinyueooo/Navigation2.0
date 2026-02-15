@@ -4,7 +4,7 @@ import com.navigation.entity.HotelFavorite;
 import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 import com.navigation.service.HotelFavoriteService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -14,7 +14,7 @@ import java.util.List;
 @RequestMapping("/hotel/favorite")
 public class HotelFavoriteController {
 
-    @Resource
+    @Autowired
     private HotelFavoriteService hotelFavoriteService;
 
 

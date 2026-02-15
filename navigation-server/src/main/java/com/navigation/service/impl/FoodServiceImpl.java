@@ -15,7 +15,7 @@ import com.navigation.result.Result;
 import com.navigation.service.FoodService;
 import com.navigation.service.FoodService;
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,13 +36,13 @@ import java.util.stream.Collectors;
 public class FoodServiceImpl extends ServiceImpl<FoodMapper, Food> implements FoodService {
 
 
-    @Resource
+    @Autowired
     private FoodMapper foodMapper;
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     @Override

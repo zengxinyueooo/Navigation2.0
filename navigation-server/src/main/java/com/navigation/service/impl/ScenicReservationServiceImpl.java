@@ -18,7 +18,7 @@ import com.navigation.result.Result;
 import com.navigation.service.ScenicReservationService;
 import com.navigation.service.ScenicService;
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -38,16 +38,16 @@ import java.util.stream.Collectors;
 public class ScenicReservationServiceImpl extends ServiceImpl<ScenicReservationMapper, ScenicReservation> implements ScenicReservationService {
 
 
-    @Resource
+    @Autowired
     private ScenicReservationMapper scenicReservationMapper;
 
-    @Resource
+    @Autowired
     private ScenicMapper scenicMapper;
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     @Override

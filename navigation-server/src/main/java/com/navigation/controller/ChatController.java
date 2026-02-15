@@ -4,6 +4,7 @@ import com.navigation.aiservice.ConsultantService;
 import com.navigation.service.ChatStreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 @Slf4j
 @RestController
@@ -22,6 +23,9 @@ public class ChatController {
 
     @Autowired
     private ChatStreamService chatStreamService;
+
+    @Autowired(required = false)
+    private Executor taskExecutor;
 
     // 非流式版本 - 避免LangChain4J 0.30.0的Flux bug
     @GetMapping(value = "/chat", produces = "application/json;charset=utf-8")
@@ -37,23 +41,37 @@ public class ChatController {
     ) {
         SseEmitter emitter = new SseEmitter(60000L); // 60秒超时
 
-        // 异步处理
-        CompletableFuture.runAsync(() -> {
+        // 使用Spring管理的线程池执行异步任务,保持Spring上下文
+        if (taskExecutor != null) {
+            taskExecutor.execute(() -> {
+                try {
+                    chatStreamService.streamChat(memoryId, message, emitter);
+                } catch (Exception e) {
+                    log.error("[ChatController] 流式聊天失败 | memoryId={} | message={} | error={}",
+                        memoryId, message, e.getMessage(), e);
+                    try {
+                        emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("生成失败,请稍后重试"));
+                        emitter.complete();
+                    } catch (IOException ex) {
+                        emitter.completeWithError(ex);
+                    }
+                }
+            });
+        } else {
+            // 如果没有配置taskExecutor,直接在当前线程执行
             try {
                 chatStreamService.streamChat(memoryId, message, emitter);
             } catch (Exception e) {
                 log.error("[ChatController] 流式聊天失败 | memoryId={} | message={} | error={}",
                     memoryId, message, e.getMessage(), e);
                 try {
-                    emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data("生成失败,请稍后重试"));
+                    emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("生成失败,请稍后重试"));
                     emitter.complete();
                 } catch (IOException ex) {
                     emitter.completeWithError(ex);
                 }
             }
-        });
+        }
 
         return emitter;
     }

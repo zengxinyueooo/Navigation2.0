@@ -29,7 +29,7 @@ import com.navigation.service.ScenicService;
 import com.navigation.service.UserService;
 import com.navigation.service.WeatherService;
 import com.navigation.utils.JsonUtils;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.formula.functions.T;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,20 +52,20 @@ import java.util.stream.Collectors;
 public class ScenicServiceImpl extends ServiceImpl<ScenicMapper, Scenic> implements ScenicService {
 
 
-    @Resource
+    @Autowired
     private ScenicMapper scenicMapper;
 
-    @Resource
+    @Autowired
     private ScenicReservationMapper scenicReservationMapper;
 
-    @Resource
+    @Autowired
     private UserMapper  userMapper;
 
 
     @Autowired
     private Validator validator;
 
-    @Resource
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
@@ -711,25 +711,45 @@ public class ScenicServiceImpl extends ServiceImpl<ScenicMapper, Scenic> impleme
             return Result.error("传入的景点名称为空");
         }
 
-        // 构建匹配键的模式
-        String pattern = "scenic:*:*" + name + "*";
-        Set<String> keys = stringRedisTemplate.keys(pattern);
-        if (keys.isEmpty()) {
+        log.info("[ScenicServiceImpl] 开始查询景点 | name={}", name);
+
+        // 使用SCAN遍历所有scenic keys
+        String pattern = "scenic:*:*";
+        ScanOptions scanOptions = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(1000)
+                .build();
+
+        List<Scenic> scenicList = new ArrayList<>();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(scanOptions)) {
+            while (cursor.hasNext()) {
+                String key = cursor.next();
+                log.debug("[ScenicServiceImpl] 扫描到key: {}", key);
+
+                String scenicJson = stringRedisTemplate.opsForValue().get(key);
+                if (scenicJson != null) {
+                    Scenic scenic = JsonUtils.fromJson(scenicJson, Scenic.class);
+                    if (scenic != null && scenic.getScenicName() != null) {
+                        // 模糊匹配景点名称
+                        if (scenic.getScenicName().contains(name)) {
+                            log.info("[ScenicServiceImpl] 找到匹配景点 | scenicName={}", scenic.getScenicName());
+                            scenicList.add(scenic);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[ScenicServiceImpl] 查询景点失败 | name={} | error={}", name, e.getMessage(), e);
+            return Result.error("查询景点信息时出现异常: " + e.getMessage());
+        }
+
+        if (scenicList.isEmpty()) {
+            log.warn("[ScenicServiceImpl] 未找到匹配景点 | name={}", name);
             return Result.error("未找到对应景点");
         }
 
-        List<Scenic> scenicList = new ArrayList<>();
-        try {
-            for (String key : keys) {
-                String scenicJson = stringRedisTemplate.opsForValue().get(key);
-                Scenic scenic = JsonUtils.fromJson(scenicJson, Scenic.class);
-                scenicList.add(scenic);
-            }
-            return Result.success(scenicList);
-        } catch (Exception e) {
-            log.error("将Redis获取的JSON数据反序列化为Scenic对象时出错，错误信息: {}", e.getMessage());
-            return Result.error("查询景点信息时出现异常: " + e.getMessage());
-        }
+        log.info("[ScenicServiceImpl] 查询成功 | name={} | 找到{}个景点", name, scenicList.size());
+        return Result.success(scenicList);
     }
 
     @Override

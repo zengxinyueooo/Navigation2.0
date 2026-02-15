@@ -4,13 +4,13 @@ import com.navigation.entity.Manager;
 import com.navigation.mapper.ManagerMapper;
 import com.navigation.service.ManagerService;
 
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 
 @Service
 public class ManagerServiceImpl implements ManagerService {
-    @Resource
+    @Autowired
     private ManagerMapper managerMapper;
 
     // 验证管理员登录

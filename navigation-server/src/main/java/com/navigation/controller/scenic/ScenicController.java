@@ -8,7 +8,7 @@ import com.navigation.result.PageResult;
 import com.navigation.result.Result;
 
 import com.navigation.service.ScenicService;
-import jakarta.annotation.Resource;
+import org.springframework.beans.factory.annotation.Autowired;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,7 +22,7 @@ import java.util.Map;
 @RequestMapping("/scenic")
 public class ScenicController {
 
-    @Resource
+    @Autowired
     private ScenicService scenicService;
 
     @PostMapping("/save")
