@@ -168,9 +168,7 @@ public class AITravelSummaryService {
             // 1. 获取行程数据
             UserRoute route = userRouteService.getRouteById(routeId);
             if (route == null) {
-                emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data("未找到行程数据"));
+                emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("未找到行程数据"));
                 emitter.complete();
                 return;
             }
@@ -178,10 +176,8 @@ public class AITravelSummaryService {
             // 2. 构建提示词
             String prompt = buildTravelPrompt(route);
 
-            // 3. 发送开始事件
-            emitter.send(SseEmitter.event()
-                    .name("start") //发送一个start事件，告诉前端生成开始了。让前端可以显示加载状态或初始提示。
-                    .data("AI开始生成行程摘要..."));
+            // 3. 发送开启事件
+            emitter.send(com.navigation.utils.StreamEventVOBuilder.buildOpenEvent());
 
             // 4. 调用流式DeepSeek API(最复杂的)
             callDeepSeekStreamAPI(prompt, emitter, route);
@@ -189,9 +185,7 @@ public class AITravelSummaryService {
         } catch (Exception e) {
             log.error("流式生成行程摘要失败 routeId: {}", routeId, e);
             try {
-                emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data("生成失败: " + e.getMessage()));
+                emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("生成失败: " + e.getMessage()));
             } catch (IOException ex) {
                 log.error("发送错误事件失败", ex);
             }
@@ -245,34 +239,37 @@ public class AITravelSummaryService {
 
             String line;
             StringBuilder fullContent = new StringBuilder();
+            int messageIndex = 0;  // 消息序号
 
             while ((line = reader.readLine()) != null) {
                 if (line.startsWith("data: ")) { //DeepSeek的流式响应格式是每行以data:开头，后面跟着JSON数据。
                     String data = line.substring(6).trim();
 
                     if ("[DONE]".equals(data)) { //当读取到[DONE]时，表示AI已经生成完毕
-                        // 流式输出完成
-                        emitter.send(SseEmitter.event()
-                                .name("complete")
-                                .data("生成完成"));
+                        // 发送关闭事件
+                        emitter.send(com.navigation.utils.StreamEventVOBuilder.buildCloseEvent());
                         break;
                     }
 
                     if (!data.isEmpty()) {
                         String contentChunk = parseStreamResponse(data); //对于每一块数据，我们解析出其中的文本内容
                         if (contentChunk != null && !contentChunk.isEmpty()) {
-                            fullContent.append(contentChunk);
+                            fullContent.append(contentChunk);  // 累积
 
-                            // 发送当前片段到前端
-                            emitter.send(SseEmitter.event()
-                                    .name("chunk")
-                                    .data(contentChunk));
+                            // 发送累积的完整文本
+                            emitter.send(com.navigation.utils.StreamEventVOBuilder.buildMessageEvent(
+                                    messageIndex++,
+                                    fullContent.toString()));
+
+                            log.debug("[AITravelSummaryService] 发送累积文本 | index={} | length={}",
+                                    messageIndex - 1, fullContent.length());
                         }
                     }
                 }
             }
 
-            log.info("流式生成完成，总字符数: {}", fullContent.length());
+            log.info("[AITravelSummaryService] 流式生成完成 | 总字符数={} | 完整内容={}",
+                    fullContent.length(), fullContent.toString());
             emitter.complete();
 
         } catch (Exception e) {

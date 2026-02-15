@@ -3,7 +3,7 @@ package com.navigation.service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.navigation.config.DeepSeekConfig;
+import com.navigation.config.QwenConfig;
 import com.navigation.tools.AITravelTools;
 import com.navigation.vo.ChatMessageVO;
 import dev.langchain4j.rag.content.Content;
@@ -31,7 +31,7 @@ import java.util.List;
 public class ChatStreamService {
 
     @Autowired
-    private DeepSeekConfig deepSeekConfig;
+    private QwenConfig qwenConfig;
 
     @Autowired
     private AITravelTools aiTravelTools;
@@ -86,6 +86,9 @@ public class ChatStreamService {
      */
     public void streamChat(String sessionId, String message, SseEmitter emitter) {
         try {
+            // 0. 发送开启事件
+            emitter.send(com.navigation.utils.StreamEventVOBuilder.buildOpenEvent());
+
             // 1. 获取历史消息(从数据库)
             List<ChatMessageVO> history = chatSessionService.getRecentMessages(sessionId, 20);
 
@@ -101,14 +104,17 @@ public class ChatStreamService {
             // 5. 保存新消息(只保存到数据库)
             saveMessages(sessionId, message, assistantResponse);
 
-            // 6. 完成SSE连接
+            // 6. 发送关闭事件
+            emitter.send(com.navigation.utils.StreamEventVOBuilder.buildCloseEvent());
+
+            // 7. 完成SSE连接
             emitter.complete();
 
         } catch (Exception e) {
             log.error("[ChatStreamService] 流式聊天失败 | sessionId={} | message={} | error={}",
                 sessionId, message, e.getMessage(), e);
             try {
-                emitter.send("生成失败,请稍后重试");
+                emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("生成失败: " + e.getMessage()));
                 emitter.completeWithError(e);
             } catch (IOException ex) {
                 log.error("[ChatStreamService] 发送错误事件失败", ex);
@@ -259,16 +265,16 @@ public class ChatStreamService {
      */
     private String callDeepSeekStreamWithTools(JSONArray messages, JSONArray tools, SseEmitter emitter, String sessionId) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
-        HttpPost post = new HttpPost(deepSeekConfig.getApiUrl());
+        HttpPost post = new HttpPost(qwenConfig.getApiUrl());
 
         // 设置请求头
         post.setHeader("Content-Type", "application/json");
-        post.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
+        post.setHeader("Authorization", "Bearer " + qwenConfig.getApiKey());
         post.setHeader("Accept", "text/event-stream");
 
         // 构建请求体
         JSONObject requestBody = new JSONObject();
-        requestBody.put("model", "deepseek-chat");
+        requestBody.put("model", qwenConfig.getModelName());
         requestBody.put("messages", messages);
         requestBody.put("tools", tools);
         requestBody.put("stream", true);
@@ -276,9 +282,31 @@ public class ChatStreamService {
 
         post.setEntity(new StringEntity(requestBody.toJSONString(), StandardCharsets.UTF_8));
 
-        log.info("[ChatStreamService] 调用DeepSeek API | messages={}", messages.size());
+        log.info("[ChatStreamService] 调用千问API | model={} | messages={} | url={}",
+                qwenConfig.getModelName(), messages.size(), qwenConfig.getApiUrl());
+        log.debug("[ChatStreamService] 请求体 | body={}", requestBody.toJSONString());
 
         CloseableHttpResponse response = client.execute(post);
+        int statusCode = response.getStatusLine().getStatusCode();
+        log.info("[ChatStreamService] API响应状态 | statusCode={} | statusLine={}",
+                statusCode, response.getStatusLine().getReasonPhrase());
+
+        if (statusCode != 200) {
+            // 读取错误响应
+            BufferedReader errorReader = new BufferedReader(
+                new InputStreamReader(response.getEntity().getContent(), StandardCharsets.UTF_8)
+            );
+            StringBuilder errorBody = new StringBuilder();
+            String errorLine;
+            while ((errorLine = errorReader.readLine()) != null) {
+                errorBody.append(errorLine);
+            }
+            errorReader.close();
+            log.error("[ChatStreamService] API调用失败 | statusCode={} | errorBody={}",
+                    statusCode, errorBody.toString());
+            throw new IOException("API调用失败: " + statusCode + " - " + errorBody.toString());
+        }
+
         BufferedReader reader = new BufferedReader(
             new InputStreamReader(response.getEntity().getContent(), StandardCharsets.UTF_8)
         );
@@ -288,6 +316,7 @@ public class ChatStreamService {
         String currentToolCallId = null;
         StringBuilder currentToolName = new StringBuilder();
         StringBuilder currentToolArgs = new StringBuilder();
+        int messageIndex = 0;  // 消息序号
 
         String line;
         while ((line = reader.readLine()) != null) {
@@ -320,9 +349,14 @@ public class ChatStreamService {
                     String content = delta.getString("content");
                     if (content != null && !content.isEmpty()) {
                         fullResponse.append(content);
-                        // 只发送纯文本内容,不带event名称
-                        emitter.send(content);
-                        log.debug("[ChatStreamService] 发送chunk | content={}", content);
+
+                        // 发送累积的完整文本
+                        emitter.send(com.navigation.utils.StreamEventVOBuilder.buildMessageEvent(
+                                messageIndex++,
+                                fullResponse.toString()));
+
+                        log.debug("[ChatStreamService] 发送累积文本 | index={} | length={}",
+                                messageIndex - 1, fullResponse.length());
                     }
 
                     // 处理工具调用
@@ -384,6 +418,8 @@ public class ChatStreamService {
             return handleToolCallsAndContinue(messages, toolCallsList, emitter, sessionId);
         }
 
+        log.info("[ChatStreamService] 流式生成完成 | 总字符数={} | 完整内容={}",
+                fullResponse.length(), fullResponse.toString());
         return fullResponse.toString();
     }
 
