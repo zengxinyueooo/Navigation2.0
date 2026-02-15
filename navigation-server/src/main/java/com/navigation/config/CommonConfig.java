@@ -35,6 +35,9 @@ public class CommonConfig {
     @Value("${langchain4j.open-ai.chat-model.model-name}")
     private String chatModelName;
 
+    @Value("${langchain4j.open-ai.embedding-model.base-url}")
+    private String embeddingBaseUrl;
+
     @Value("${langchain4j.open-ai.embedding-model.model-name}")
     private String embeddingModelName;
 
@@ -64,18 +67,11 @@ public class CommonConfig {
                 .build();
     }
 
-    // 手动创建EmbeddingModel bean - 千问API与OpenAI兼容
+    // 手动创建EmbeddingModel bean - 使用自定义千问实现
     @Bean
     public EmbeddingModel embeddingModel() {
-        log.info("[CommonConfig] 初始化千问Embedding模型 | baseUrl={} | model={}", baseUrl, embeddingModelName);
-        return OpenAiEmbeddingModel.builder()
-                .baseUrl(baseUrl)
-                .apiKey(apiKey)
-                .modelName(embeddingModelName)
-                .timeout(Duration.ofSeconds(60))
-                .logRequests(true)
-                .logResponses(true)
-                .build();
+        log.info("[CommonConfig] 初始化千问Embedding模型(自定义实现) | baseUrl={} | model={}", embeddingBaseUrl, embeddingModelName);
+        return new QwenEmbeddingModel(apiKey, embeddingBaseUrl, embeddingModelName);
     }
 
     // 手动创建RedisEmbeddingStore bean
@@ -90,7 +86,7 @@ public class CommonConfig {
                     .port(8110)
                     .password("~gmb7GK%aviH!518aU%8")
                     .dimension(1024)  // 千问 text-embedding-v3 的向量维度是1024
-                    .indexName("navigation-embeddings")  // 索引名称
+                    .indexName("navigation-embeddings-v3")  // 修改索引名称,避免与旧索引冲突
                     .build();
         } catch (Exception e) {
             log.error("[CommonConfig] Redis向量存储初始化失败,降级为内存存储 | error={}", e.getMessage());
@@ -109,7 +105,7 @@ public class CommonConfig {
      *      当用户输入查询文本时，embeddingModel 会将查询文本转换为向量。
      *      检索器在 redisEmbeddingStore 中计算查询向量与所有存储向量的相似度（如余弦相似度）。
      *      返回相似度 ≥0.5 且 top 3 的文档片段，供大模型生成回答时参考（增强回答的准确性）。
-     * @param store
+     * @param
      * @return
      */
 
