@@ -513,17 +513,70 @@ public class ScenicServiceImpl extends ServiceImpl<ScenicMapper, Scenic> impleme
 
     @Override
     public Result<List<Scenic>> queryPageByRegionName(Integer page, Integer pageSize, String regionName) {
-        // 计算偏移量
-        int offset = (page - 1) * pageSize;
+        try {
+            // 1. 从 Redis 查询 region，获取 regionId
+            String regionPattern = "region:*:" + regionName;
+            Set<String> regionKeys = stringRedisTemplate.keys(regionPattern);
 
-        // 执行查询
-        List<Scenic> scenicList = scenicMapper.queryPageByRegionName(regionName, pageSize, offset);
+            if (regionKeys == null || regionKeys.isEmpty()) {
+                log.warn("[ScenicService] 未找到地区 | regionName={}", regionName);
+                return Result.error("未找到地区: " + regionName);
+            }
 
-        // 返回结果
-        if (scenicList != null && !scenicList.isEmpty()) {
-            return Result.success(scenicList);
-        } else {
-            return Result.error("No scenic spots found for this region.");
+            // 解析 regionId (从 key "region:1:西安" 中提取 1)
+            String regionKey = regionKeys.iterator().next();
+            String[] parts = regionKey.split(":");
+            Integer regionId = Integer.parseInt(parts[1]);
+
+            log.info("[ScenicService] 找到地区 | regionName={} | regionId={}", regionName, regionId);
+
+            // 2. 获取所有 scenic keys
+            Set<String> scenicKeys = stringRedisTemplate.keys("scenic:*:*");
+            if (scenicKeys == null || scenicKeys.isEmpty()) {
+                log.warn("[ScenicService] Redis中暂无景点数据");
+                return Result.error("暂无景点数据");
+            }
+
+            // 3. 过滤出该地区的景点
+            List<Scenic> allScenics = new ArrayList<>();
+            for (String key : scenicKeys) {
+                String scenicJson = stringRedisTemplate.opsForValue().get(key);
+                if (scenicJson != null) {
+                    try {
+                        // 使用ObjectMapper替代FastJSON,避免中文日期格式解析问题
+                        ObjectMapper objectMapper = JsonUtils.getObjectMapper();
+                        Scenic scenic = objectMapper.readValue(scenicJson, Scenic.class);
+
+                        if (scenic != null && regionId.equals(scenic.getRegionId())) {
+                            allScenics.add(scenic);
+                            log.debug("[ScenicService] 成功解析景点 | scenicName={} | regionId={}",
+                                scenic.getScenicName(), scenic.getRegionId());
+                        }
+                    } catch (Exception e) {
+                        log.warn("[ScenicService] 解析景点数据失败 | key={} | error={}", key, e.getMessage());
+                        // 跳过这个景点，继续处理下一个
+                    }
+                }
+            }
+
+            log.info("[ScenicService] 找到景点 | regionName={} | regionId={} | count={}",
+                regionName, regionId, allScenics.size());
+
+            // 4. 分页
+            int offset = (page - 1) * pageSize;
+            int end = Math.min(offset + pageSize, allScenics.size());
+
+            if (offset >= allScenics.size()) {
+                return Result.success(new ArrayList<>());
+            }
+
+            List<Scenic> pagedScenics = allScenics.subList(offset, end);
+            return Result.success(pagedScenics);
+
+        } catch (Exception e) {
+            log.error("[ScenicService] 查询地区景点失败 | regionName={} | error={}",
+                regionName, e.getMessage(), e);
+            return Result.error("查询失败: " + e.getMessage());
         }
     }
 

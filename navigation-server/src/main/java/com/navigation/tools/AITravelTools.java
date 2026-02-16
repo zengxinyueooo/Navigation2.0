@@ -59,14 +59,15 @@ public class AITravelTools {
 
         Scenic scenic = result.getData().get(0); // 取第一个匹配的景点
 
-        // 第二步：根据景点ID获取票务信息
-        List<Ticket> tickets = (List<Ticket>) ticketService.queryByScenicName(scenic.getScenicName());
+        // 第二步：根据景点名称获取票务信息
+        Result<List<Ticket>> ticketResult = ticketService.queryByScenicName(scenic.getScenicName());
 
-        if (tickets.isEmpty()) {
+        if (ticketResult == null || ticketResult.getData() == null || ticketResult.getData().isEmpty()) {
             return String.format("景点：%s 没有门票信息。", scenic.getScenicName());
         }
 
         // 假设我们只取第一个票种的价格
+        List<Ticket> tickets = ticketResult.getData();
         Ticket ticket = tickets.get(0);
 
         return String.format("""

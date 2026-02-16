@@ -25,6 +25,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -46,9 +47,42 @@ public class ChatStreamService {
     private static final String SYSTEM_MESSAGE_CONTENT = """
         你是"秦游千里"平台提供的专业AI旅游顾问,可以为用户提供以下服务:
 
+        🚨🚨🚨 **【超级重要 - 回答风格要求】** 🚨🚨🚨
+        你必须用轻松、自然、像朋友聊天的语气回答，绝对不能用正式的、官方的、客服式的语气！
+        绝对不能说"您好！刚刚通过官方工具实时查询"这种话！
+        绝对不能过度使用✅、📌、🔹等符号！
+        要用"你"而不是"您"！要像朋友一样说话！
+
+        ⚠️ **【强制规则 - 必须严格遵守】** ⚠️
+
+        **工具调用规则（优先级最高）:**
+        1. 当用户询问具体景点的信息时（如门票价格、开放时间、位置、介绍等），你**必须立即调用** searchScenicSpot 工具
+           - 示例问题："大唐芙蓉园门票多少钱"、"兵马俑几点开门"、"华山在哪里"
+           - 不要凭记忆回答，不要猜测，必须调用工具获取最新准确数据
+
+        2. 当用户询问某地区有哪些景点或推荐景点时，你**必须立即调用** recommendScenics 工具
+           - 示例问题："西安有什么好玩的"、"推荐咸阳的景点"
+
+        3. 当用户询问酒店信息时，你**必须立即调用** searchHotels 工具
+           - 示例问题："西安附近的酒店"、"大唐不夜城附近住哪"
+
+        4. 当用户询问美食推荐时，你**必须立即调用** recommendFoods 工具
+           - 示例问题："西安有什么好吃的"、"推荐延安美食"
+
+        **禁止行为:**
+        - ❌ 禁止凭记忆或知识库直接回答门票价格、开放时间等具体信息
+        - ❌ 禁止说"我不确定"、"可能是XX元"等模糊回答
+        - ❌ 禁止在不调用工具的情况下回答具体景点、酒店、美食的详细信息
+
+        **正确流程:**
+        1. 识别用户问题类型
+        2. 立即调用对应工具获取数据
+        3. 基于工具返回的真实数据组织回答
+        4. 用友好的语气呈现给用户
+
         **核心功能:**
         1. 生成陕西省内旅游攻略和行程规划
-        2. 查询景点、酒店、美食的详细信息
+        2. 查询景点、酒店、美食的详细信息（必须通过工具）
         3. 解答旅游相关的常见问题
 
         **详细说明:**
@@ -56,29 +90,91 @@ public class ChatStreamService {
         **1. 旅游攻略生成**
         - 当用户询问行程规划时(如"3天西安怎么玩"、"带孩子的陕西行程"),基于真实数据生成详细的旅行攻略
         - 攻略应包含:每日行程安排、景点推荐、餐饮建议、预算估算
-        - 确保推荐的景点、酒店、美食都是陕西省内真实存在的
+        - 确保推荐的景点、酒店、美食都是通过工具查询得到的真实数据
 
         **2. 信息查询规则**
         - 查询景点信息需要用户提供准确的景点名称
         - 如果名称不准确或信息不全,请委婉提示用户提供更具体的名称
-        - 所有信息必须基于平台真实数据,不能编造不存在的景点或服务
+        - 所有信息必须通过工具调用获取,不能编造不存在的景点或服务
 
         **3. 数据真实性要求**
-        - 所有推荐的景点、酒店、美食必须是陕西省内真实存在的
+        - 所有推荐的景点、酒店、美食必须通过工具查询获得
         - 不能虚构景点信息、开放时间、门票价格等数据
-        - 如果不知道某个景点的具体信息,请如实告知用户
+        - 必须使用工具返回的最新数据
 
-        **4. 回复风格要求**
-        - 语气友好、专业、热情,体现陕西文化的特色
-        - 直接回答问题,不要使用"根据资料显示"、"根据系统信息"等冗余表述
-        - 对于旅游相关的问题要详细解答,非旅游问题可以委婉拒绝
+        **4. 回复风格要求（必须严格遵守，否则视为失败）**
+
+        ⚠️ **绝对禁止的表达（一旦出现立即判定为错误）**：
+        - ❌ "您好！刚刚通过官方工具实时查询"
+        - ❌ "已获取最新、最权威的信息"
+        - ❌ "根据资料显示"、"根据系统信息"
+        - ❌ "通过工具查询"、"我调用了XX工具"
+        - ❌ "刚帮你查了"、"帮你查到了"、"查询到"等暗示查询过程的词
+        - ❌ "硬核宝藏清单"、"实时数据"、"最新信息"等暗示数据来源的词
+        - ❌ 过度使用"✅"、"📌"、"🔹"等符号（超过2个就算过度）
+        - ❌ 使用"您"而不是"你"
+        - ❌ 说"为您服务"、"立刻为您安排"等客服话术
+
+        ✅ **必须遵守的风格**：
+        - 语气轻松、活泼、亲切，就像和朋友聊天
+        - 用"你"而不是"您"
+        - 多用口语词："挺"、"特别"、"可多了"、"嘛"
+        - 可以用"对了"、"话说"、"其实"等连接词
+        - 适当用"～"、"！"，但不要堆砌符号
+        - 不要用表格、不要用大量emoji
+        - 就像本地朋友在给你推荐，不是客服在念稿子
+        - **绝对不能暴露你获取信息的过程**：不要说"查了"、"查到"、"获取"等词
+        - 要像你本来就知道这些信息一样自然地告诉用户
 
         **5. 边界限制**
         - 只回答与陕西旅游、景点查询、行程规划相关的问题
         - 不回答与旅游无关的政治、经济、技术等问题
         - 不提供医疗、法律等专业建议
 
-        你是专业的陕西旅游顾问,请用你的专业知识为用户提供最好的旅游建议和服务!
+        **6. 回答示例（必须严格模仿这种风格，不要偏离）**
+
+        ❌ **严重错误示例**（绝对不能这样回答）：
+        "您好！刚刚通过官方工具实时查询，已获取**大唐芙蓉园最新、最权威的门票信息**：
+        ✅ **门票价格：¥167.00/人**
+        ✅ **位置**：西安市雁塔区..."
+
+        "我刚刚通过 searchScenicSpot 工具查询到..."
+        "根据工具返回的数据显示..."
+
+        ✅ **正确示例**（轻松、自然、像朋友聊天）：
+
+        用户问："大唐芙蓉园门票多少钱？"
+        回答："大唐芙蓉园现在门票是167元一个人，包含了所有演出和展馆，性价比挺高的！园区每天9点到晚上10点都开放，在曲江那边，坐地铁4号线到曲江池西站下车走几分钟就到了。
+
+        对了，建议你提前在【大唐芙蓉园】微信公众号上买票，现场不卖当日票的。如果你是学生的话可以半价，老人和小孩还有免票政策呢。晚上去最合适，能看到《梦回大唐》演出和水幕电影，灯光也特别漂亮！"
+
+        用户问："咸阳有什么好玩的景点？"
+        回答："咸阳好玩的地方挺多的！乾陵是武则天和唐高宗的合葬陵，门票103元，神道石像生特别震撼。汉阳陵也值得去，60元门票，地下博物馆的玻璃栈道直接踩在陪葬坑上，很有意思。
+
+        还有郑国渠风景区，65元门票，山水挺清奇的。如果想体验民俗文化，马嵬驿和袁家村都是免费的，可以吃吃逛逛，特别接地气。你想玩历史文化类的还是民俗美食类的？"
+
+        ❌ **错误示例**（绝对不能这样说）：
+        "哇！这下可太全啦～刚帮你查了咸阳的'硬核宝藏清单'，连门票、特色、怎么玩都齐了..."
+        "帮你查到了咸阳5个必去景点..."
+        "查询到咸阳有以下景点..."
+
+        用户问："华山门票多少钱？"
+        回答："华山门票是160元/人，索道的话西峰往返280元，北峰往返150元。华山挺险的，建议穿舒服的运动鞋，带点水和吃的。如果想看日出，可以考虑住山上，不过山上住宿条件一般，价格也贵一些。你打算爬山还是坐索道上去？"
+
+        **核心原则**：
+        - 用"你"而不是"您"（更亲切）
+        - 用"挺"、"特别"、"可"等口语词
+        - 可以用"对了"、"话说"、"其实"等连接词
+        - 适当用"～"、"！"增加亲和力
+        - 不要堆砌emoji和符号
+        - 不要说"我查询到"、"实时获取"等技术词汇
+        - 就像你本地的朋友在给你推荐一样自然
+
+        🚨 **最后强调一次**：
+        如果你的回答中出现"刚帮你查了"、"查到了"、"获取到"等词，那就是完全错误的！
+        正确的表达应该是："咸阳好玩的地方挺多的！乾陵门票103元..."这种自然的表达！
+        记住：你是朋友，不是客服！不是机器人！不要暴露任何查询过程和技术细节！
+        要像你本来就很熟悉这些地方一样，直接告诉用户信息，而不是说"我帮你查了"！
         """;
 
     /**
@@ -98,16 +194,19 @@ public class ChatStreamService {
             // 3. 构建工具定义
             JSONArray tools = buildToolDefinitions();
 
-            // 4. 调用流式API
-            String assistantResponse = callDeepSeekStreamWithTools(messages, tools, emitter, sessionId);
+            // 4. 智能判断是否需要强制工具调用
+            String toolChoice = determineToolChoice(message);
 
-            // 5. 保存新消息(只保存到数据库)
+            // 5. 调用流式API
+            String assistantResponse = callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, toolChoice);
+
+            // 6. 保存新消息(只保存到数据库)
             saveMessages(sessionId, message, assistantResponse);
 
-            // 6. 发送关闭事件
+            // 7. 发送关闭事件
             emitter.send(com.navigation.utils.StreamEventVOBuilder.buildCloseEvent());
 
-            // 7. 完成SSE连接
+            // 8. 完成SSE连接
             emitter.complete();
 
         } catch (Exception e) {
@@ -119,6 +218,38 @@ public class ChatStreamService {
             } catch (IOException ex) {
                 log.error("[ChatStreamService] 发送错误事件失败", ex);
             }
+        }
+    }
+
+    /**
+     * 智能判断是否需要强制工具调用
+     * 根据用户问题的关键词判断是否需要查询具体信息
+     */
+    private String determineToolChoice(String message) {
+        String lowerMessage = message.toLowerCase();
+
+        // 检测是否包含需要查询具体信息的关键词
+        boolean needsToolCall =
+            // 景点相关查询
+            lowerMessage.contains("门票") || lowerMessage.contains("价格") || lowerMessage.contains("多少钱") ||
+            lowerMessage.contains("开放时间") || lowerMessage.contains("几点开门") || lowerMessage.contains("营业时间") ||
+            lowerMessage.contains("在哪") || lowerMessage.contains("位置") || lowerMessage.contains("地址") ||
+            lowerMessage.contains("怎么去") || lowerMessage.contains("介绍") ||
+            // 推荐类查询
+            lowerMessage.contains("推荐") || lowerMessage.contains("有什么") || lowerMessage.contains("有哪些") ||
+            lowerMessage.contains("好玩的") || lowerMessage.contains("景点") ||
+            // 酒店查询
+            lowerMessage.contains("酒店") || lowerMessage.contains("住宿") || lowerMessage.contains("宾馆") ||
+            // 美食查询
+            lowerMessage.contains("美食") || lowerMessage.contains("好吃的") || lowerMessage.contains("吃什么") ||
+            lowerMessage.contains("餐厅") || lowerMessage.contains("小吃");
+
+        if (needsToolCall) {
+            log.info("[ChatStreamService] 检测到需要工具调用的问题 | message={} | toolChoice=required", message);
+            return "required";  // 强制必须使用工具
+        } else {
+            log.info("[ChatStreamService] 普通对话问题 | message={} | toolChoice=auto", message);
+            return "auto";  // 自动判断
         }
     }
 
@@ -263,7 +394,7 @@ public class ChatStreamService {
     /**
      * 流式API调用 - 参考AITravelSummaryService的实现
      */
-    private String callDeepSeekStreamWithTools(JSONArray messages, JSONArray tools, SseEmitter emitter, String sessionId) throws IOException {
+    private String callDeepSeekStreamWithTools(JSONArray messages, JSONArray tools, SseEmitter emitter, String sessionId, String toolChoice) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost post = new HttpPost(qwenConfig.getApiUrl());
 
@@ -277,8 +408,11 @@ public class ChatStreamService {
         requestBody.put("model", qwenConfig.getModelName());
         requestBody.put("messages", messages);
         requestBody.put("tools", tools);
+        requestBody.put("tool_choice", toolChoice);  // 动态设置：auto=自动判断, required=必须使用工具
         requestBody.put("stream", true);
         requestBody.put("temperature", 0.7);
+
+        log.info("[ChatStreamService] 请求配置 | toolChoice={}", toolChoice);
 
         post.setEntity(new StringEntity(requestBody.toJSONString(), StandardCharsets.UTF_8));
 
@@ -313,9 +447,8 @@ public class ChatStreamService {
 
         StringBuilder fullResponse = new StringBuilder();
         List<JSONObject> toolCallsList = new ArrayList<>();
-        String currentToolCallId = null;
-        StringBuilder currentToolName = new StringBuilder();
-        StringBuilder currentToolArgs = new StringBuilder();
+        // 使用 Map 存储多个工具调用：key=toolCallId, value={id, name, args}
+        Map<String, JSONObject> toolCallsMap = new java.util.HashMap<>();
         int messageIndex = 0;  // 消息序号
 
         String line;
@@ -365,25 +498,44 @@ public class ChatStreamService {
                         for (int i = 0; i < toolCalls.size(); i++) {
                             JSONObject toolCall = toolCalls.getJSONObject(i);
 
+                            // 获取 index（用于区分多个工具调用）
+                            Integer index = toolCall.getInteger("index");
+                            if (index == null) {
+                                index = 0; // 默认为 0
+                            }
+
+                            String mapKey = String.valueOf(index);
+
+                            // 获取或创建该 index 的工具调用对象
+                            JSONObject toolCallObj = toolCallsMap.computeIfAbsent(mapKey, k -> {
+                                JSONObject obj = new JSONObject();
+                                obj.put("id", "");
+                                obj.put("name", "");
+                                obj.put("arguments", "");
+                                return obj;
+                            });
+
                             // 获取tool call id
                             String id = toolCall.getString("id");
-                            if (id != null) {
-                                currentToolCallId = id;
+                            if (id != null && !id.isEmpty()) {
+                                toolCallObj.put("id", id);
                             }
 
                             // 获取function信息
                             JSONObject function = toolCall.getJSONObject("function");
                             if (function != null) {
                                 String name = function.getString("name");
-                                if (name != null) {
-                                    currentToolName.append(name);
+                                if (name != null && !name.isEmpty()) {
+                                    toolCallObj.put("name", toolCallObj.getString("name") + name);
                                 }
 
                                 String arguments = function.getString("arguments");
-                                if (arguments != null) {
-                                    currentToolArgs.append(arguments);
+                                if (arguments != null && !arguments.isEmpty()) {
+                                    toolCallObj.put("arguments", toolCallObj.getString("arguments") + arguments);
                                 }
                             }
+
+                            toolCallsMap.put(mapKey, toolCallObj);
                         }
                     }
 
@@ -398,24 +550,34 @@ public class ChatStreamService {
         client.close();
 
         // 如果有工具调用,处理工具调用
-        if (currentToolCallId != null && currentToolName.length() > 0) {
-            JSONObject toolCallObj = new JSONObject();
-            toolCallObj.put("id", currentToolCallId);
-            toolCallObj.put("type", "function");
-            JSONObject funcObj = new JSONObject();
-            funcObj.put("name", currentToolName.toString());
-            funcObj.put("arguments", currentToolArgs.toString());
-            toolCallObj.put("function", funcObj);
-            toolCallsList.add(toolCallObj);
+        if (!toolCallsMap.isEmpty()) {
+            // 将 Map 转换为 List
+            for (Map.Entry<String, JSONObject> entry : toolCallsMap.entrySet()) {
+                JSONObject toolCallData = entry.getValue();
+                String toolId = toolCallData.getString("id");
+                String toolName = toolCallData.getString("name");
+                String toolArgs = toolCallData.getString("arguments");
 
-            log.info("[ChatStreamService] 检测到工具调用 | tool={} | args={}",
-                currentToolName.toString(), currentToolArgs.toString());
+                if (toolId != null && !toolId.isEmpty() && toolName != null && !toolName.isEmpty()) {
+                    JSONObject toolCallObj = new JSONObject();
+                    toolCallObj.put("id", toolId);
+                    toolCallObj.put("type", "function");
+                    JSONObject funcObj = new JSONObject();
+                    funcObj.put("name", toolName);
+                    funcObj.put("arguments", toolArgs);
+                    toolCallObj.put("function", funcObj);
+                    toolCallsList.add(toolCallObj);
 
-            // 工具调用静默执行,不发送提示
-            log.debug("[ChatStreamService] 工具调用 | tool={}", currentToolName.toString());
+                    log.info("[ChatStreamService] 检测到工具调用 | tool={} | args={}",
+                        toolName, toolArgs);
+                }
+            }
 
-            // 处理工具调用并继续
-            return handleToolCallsAndContinue(messages, toolCallsList, emitter, sessionId);
+            if (!toolCallsList.isEmpty()) {
+                log.info("[ChatStreamService] 共检测到 {} 个工具调用", toolCallsList.size());
+                // 处理工具调用并继续
+                return handleToolCallsAndContinue(messages, toolCallsList, emitter, sessionId);
+            }
         }
 
         log.info("[ChatStreamService] 流式生成完成 | 总字符数={} | 完整内容={}",
@@ -452,6 +614,7 @@ public class ChatStreamService {
             toolResultMsg.put("content", result);
             toolResults.add(toolResultMsg);
 
+            // 完整打印工具返回结果
             log.info("[ChatStreamService] 工具执行完成 | tool={} | result={}", toolName, result);
         }
 
@@ -468,8 +631,8 @@ public class ChatStreamService {
         // 4. 重新构建工具定义
         JSONArray tools = buildToolDefinitions();
 
-        // 5. 递归调用API获取最终回复
-        return callDeepSeekStreamWithTools(messages, tools, emitter, sessionId);
+        // 5. 递归调用API获取最终回复（工具执行后使用auto模式）
+        return callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, "auto");
     }
 
     /**
