@@ -1,5 +1,6 @@
 package com.navigation.controller;
 
+import com.navigation.context.BaseContext;
 import com.navigation.result.Result;
 import com.navigation.service.ChatSessionService;
 import com.navigation.vo.ChatMessageVO;
@@ -22,42 +23,55 @@ public class ChatSessionController {
     private ChatSessionService chatSessionService;
 
     /**
-     * 创建新会话
-     * @param userId 用户ID(可选,不传表示游客)
+     * 创建新会话（必须登录，自动从token获取userId）
      * @return 会话ID
      */
     @PostMapping("/create")
-    public Result<String> createSession(@RequestParam(value = "userId", required = false) Long userId) {
-        String sessionId = chatSessionService.createSession(userId);
-        log.info("[ChatSessionController] 创建新会话 | sessionId={} | userId={}", sessionId, userId);
-        return Result.success(sessionId);
+    public Result<String> createSession() {
+        try {
+            Integer userId = BaseContext.getUserId();
+            String sessionId = chatSessionService.createSession(userId != null ? userId.longValue() : null);
+            log.info("[ChatSessionController] 创建新会话 | sessionId={} | userId={}", sessionId, userId);
+            return Result.success(sessionId);
+        } catch (RuntimeException e) {
+            log.error("[ChatSessionController] 创建会话失败 | error={}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
-     * 获取用户的所有会话列表
-     * @param userId 用户ID
+     * 获取用户的所有会话列表（必须登录，自动从token获取userId）
      * @return 会话列表
      */
     @GetMapping("/list")
-    public Result<List<ChatSessionVO>> listSessions(@RequestParam("userId") Long userId) {
-        List<ChatSessionVO> sessions = chatSessionService.listSessions(userId);
-        return Result.success(sessions);
+    public Result<List<ChatSessionVO>> listSessions() {
+        try {
+            Integer userId = BaseContext.getUserId();
+            List<ChatSessionVO> sessions = chatSessionService.listSessions(userId != null ? userId.longValue() : null);
+            return Result.success(sessions);
+        } catch (RuntimeException e) {
+            log.error("[ChatSessionController] 获取会话列表失败 | error={}", e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 
     /**
-     * 删除会话
-     * @param userId 用户ID
+     * 删除会话（必须登录，自动从token获取userId，只能删除自己的会话）
      * @param sessionId 会话ID
      * @return 成功/失败
      */
     @DeleteMapping("/{sessionId}")
-    public Result<Void> deleteSession(
-        @RequestParam("userId") Long userId,
-        @PathVariable("sessionId") String sessionId
-    ) {
-        chatSessionService.deleteSession(userId, sessionId);
-        log.info("[ChatSessionController] 删除会话 | sessionId={} | userId={}", sessionId, userId);
-        return Result.success();
+    public Result<Void> deleteSession(@PathVariable("sessionId") String sessionId) {
+        try {
+            Integer userId = BaseContext.getUserId();
+            chatSessionService.deleteSession(userId != null ? userId.longValue() : null, sessionId);
+            log.info("[ChatSessionController] 删除会话成功 | sessionId={} | userId={}", sessionId, userId);
+            return Result.success();
+        } catch (RuntimeException e) {
+            log.error("[ChatSessionController] 删除会话失败 | sessionId={} | error={}",
+                sessionId, e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 
     /**

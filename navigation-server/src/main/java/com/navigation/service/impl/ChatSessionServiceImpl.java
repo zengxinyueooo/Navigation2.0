@@ -35,6 +35,11 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Override
     @Transactional
     public String createSession(Long userId) {
+        // 必须登录才能创建会话
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+
         String sessionId = UUID.randomUUID().toString().replace("-", "");
 
         ChatSession session = new ChatSession();
@@ -53,6 +58,11 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public List<ChatSessionVO> listSessions(Long userId) {
+        // 必须登录才能查看会话列表
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+
         QueryWrapper<ChatSession> wrapper = new QueryWrapper<>();
         wrapper.eq("user_id", userId)
                .eq("is_deleted", 0)
@@ -90,21 +100,31 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     @Override
     @Transactional
     public void deleteSession(Long userId, String sessionId) {
-        // 验证权限
-        if (!validateSession(userId, sessionId)) {
+        // 必须登录才能删除会话
+        if (userId == null) {
+            throw new RuntimeException("请先登录");
+        }
+
+        // 查询会话信息
+        QueryWrapper<ChatSession> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("session_id", sessionId).eq("is_deleted", 0);
+        ChatSession session = chatSessionMapper.selectOne(queryWrapper);
+
+        if (session == null) {
+            throw new RuntimeException("会话不存在");
+        }
+
+        // 验证会话是否属于该用户
+        if (!session.getUserId().equals(userId)) {
+            log.error("[ChatSessionService] 权限验证失败 | sessionId={} | 请求userId={} | 会话userId={}",
+                sessionId, userId, session.getUserId());
             throw new RuntimeException("无权删除该会话");
         }
 
         // 软删除会话
-        QueryWrapper<ChatSession> wrapper = new QueryWrapper<>();
-        wrapper.eq("session_id", sessionId);
-        ChatSession session = chatSessionMapper.selectOne(wrapper);
-        if (session != null) {
-            session.setIsDeleted(1);
-            chatSessionMapper.updateById(session);
-        }
-
-        log.info("[ChatSessionService] 删除会话 | sessionId={} | userId={}", sessionId, userId);
+        session.setIsDeleted(1);
+        chatSessionMapper.updateById(session);
+        log.info("[ChatSessionService] 删除会话成功 | sessionId={} | userId={}", sessionId, userId);
     }
 
     @Override
@@ -177,23 +197,20 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public boolean validateSession(Long userId, String sessionId) {
+        // 必须登录
+        if (userId == null) {
+            return false;
+        }
+
         QueryWrapper<ChatSession> wrapper = new QueryWrapper<>();
         wrapper.eq("session_id", sessionId)
+               .eq("user_id", userId)  // 直接查询该用户的会话
                .eq("is_deleted", 0);
 
         ChatSession session = chatSessionMapper.selectOne(wrapper);
 
-        if (session == null) {
-            return false;
-        }
-
-        // 如果userId为null(游客),只检查会话存在
-        if (userId == null) {
-            return true;
-        }
-
-        // 验证会话是否属于该用户
-        return session.getUserId() != null && session.getUserId().equals(userId);
+        // 会话存在且属于该用户
+        return session != null;
     }
 
     @Override

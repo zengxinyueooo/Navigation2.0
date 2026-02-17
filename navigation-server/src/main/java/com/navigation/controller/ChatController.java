@@ -1,6 +1,7 @@
 package com.navigation.controller;
 
 import com.navigation.aiservice.ConsultantService;
+import com.navigation.context.BaseContext;
 import com.navigation.service.ChatStreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,19 +28,27 @@ public class ChatController {
     @Autowired(required = false)
     private Executor taskExecutor;
 
-    // 非流式版本 - 避免LangChain4J 0.30.0的Flux bug
+    // 非流式版本 - 避免LangChain4J 0.30.0的Flux bug（必须登录，自动从token获取userId）
     @GetMapping(value = "/chat", produces = "application/json;charset=utf-8")
-    public String chat(@RequestParam("memoryId") String memoryId, @RequestParam("message") String message){
+    public String chat(
+        @RequestParam("memoryId") String memoryId,
+        @RequestParam("message") String message
+    ) {
+        // userId已经由JWT拦截器自动解析并存入BaseContext
+        // 拦截器会自动验证登录状态，这里无需再验证
         return consultantService.chat(memoryId, message);
     }
 
-    // 流式版本 - 使用自定义实现绕过LangChain4J的Flux bug
+    // 流式版本 - 使用自定义实现绕过LangChain4J的Flux bug（必须登录，自动从token获取userId）
     @GetMapping(value = "/chatStream", produces = "text/event-stream;charset=utf-8")
     public SseEmitter chatStream(
         @RequestParam("memoryId") String memoryId,
         @RequestParam("message") String message
     ) {
         SseEmitter emitter = new SseEmitter(60000L); // 60秒超时
+
+        // userId已经由JWT拦截器自动解析并存入BaseContext
+        // 拦截器会自动验证登录状态，这里无需再验证
 
         // 使用Spring管理的线程池执行异步任务,保持Spring上下文
         if (taskExecutor != null) {
