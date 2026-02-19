@@ -46,32 +46,32 @@ public class ScenicController {
     }
 
     @GetMapping("/query")
-    public PageResult queryScenic(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryScenic(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize) {
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicService.queryScenic(page, pageSize);
+        return Result.success(scenicService.queryScenic(page, pageSize));
     }
 
     @GetMapping("/query2")
-    public PageResult queryScenic2(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryScenic2(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize) {
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicService.queryScenic2(page, pageSize);
+        return Result.success(scenicService.queryScenic2(page, pageSize));
     }
 
     @GetMapping("/queryComments")
-    public PageResult queryScenicComments(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryScenicComments(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize,
                                   @RequestParam Integer scenicId){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicService.queryScenicComments(page,pageSize, scenicId);
+        return Result.success(scenicService.queryScenicComments(page,pageSize, scenicId));
     }
     @GetMapping("/queryPageByRegionId")
-    public PageResult queryPageByRegionId(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryPageByRegionId(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize,
                                   @RequestParam Integer regionId){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicService.queryPageByRegionId(page,pageSize,regionId);
+        return Result.success(scenicService.queryPageByRegionId(page,pageSize,regionId));
     }
 
 

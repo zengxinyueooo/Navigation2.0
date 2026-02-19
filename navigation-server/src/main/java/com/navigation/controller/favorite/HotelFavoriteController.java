@@ -62,9 +62,9 @@ public class HotelFavoriteController {
     }
 
     @GetMapping("/queryPage")
-    public PageResult queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
                                         @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return hotelFavoriteService.queryPageByUserId(page,pageSize);
+        return Result.success(hotelFavoriteService.queryPageByUserId(page,pageSize));
     }
 }

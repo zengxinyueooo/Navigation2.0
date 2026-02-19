@@ -39,17 +39,17 @@ public class ScenicReservationController {
     }
 
     @GetMapping("/query")
-    public PageResult queryScenicReservation(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryScenicReservation(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicReservationService.queryScenicReservation(page,pageSize);
+        return Result.success(scenicReservationService.queryScenicReservation(page,pageSize));
     }
 
     @GetMapping("/queryTop10")
-    public PageResult queryScenicReservationTop10(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryScenicReservationTop10(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicReservationService.queryScenicReservationTop10(page,pageSize);
+        return Result.success(scenicReservationService.queryScenicReservationTop10(page,pageSize));
     }
 
 

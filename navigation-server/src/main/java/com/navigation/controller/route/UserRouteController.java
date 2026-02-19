@@ -2,6 +2,7 @@ package com.navigation.controller.route;
 
 import com.github.pagehelper.PageInfo;
 import com.navigation.entity.UserRoute;
+import com.navigation.result.Result;
 import com.navigation.service.UserRouteService;
 import com.navigation.utils.JwtUtils;
 import io.swagger.annotations.Api;
@@ -41,19 +42,19 @@ public class UserRouteController {
      */
     @PostMapping
     @ApiOperation(value = "保存用户的路线", notes = "根据传入的路线信息保存用户路线，必须提供有效的 Token")
-    public String saveRoute(
+    public Result<String> saveRoute(
             @ApiParam(value = "用户的 JWT Token", required = true) @RequestHeader("Authorization") String token,
             @ApiParam(value = "用户路线对象", required = true) @RequestBody UserRoute route) {
 
         Integer userId = getUserIdFromToken(token);
         if (userId == null) {
-            return "无效的Token，无法验证用户身份";
+            return Result.error("无效的Token，无法验证用户身份");
         }
 
         route.setUserId(userId); // 设置当前用户的 ID
         route.setId(null);  // 强制清空 id 字段，确保数据库自动生成
         userRouteService.saveRoute(route);
-        return "保存成功";
+        return Result.success(null, "保存成功");
     }
 
 
@@ -65,23 +66,23 @@ public class UserRouteController {
      */
     @DeleteMapping("/{routeId}")
     @ApiOperation(value = "删除用户的路线", notes = "根据路线 ID 删除用户的路线，删除前会验证用户身份")
-    public String deleteRoute(
+    public Result<String> deleteRoute(
             @ApiParam(value = "用户的 JWT Token", required = true) @RequestHeader("Authorization") String token,
             @ApiParam(value = "要删除的路线 ID", required = true) @PathVariable Long routeId) {
 
         Integer userId = getUserIdFromToken(token);
         if (userId == null) {
-            return "无效的Token，无法验证用户身份";  // Token 无效时，返回身份验证失败
+            return Result.error("无效的Token，无法验证用户身份");
         }
 
         // 验证该路线是否属于当前用户
         UserRoute route = userRouteService.getRouteById(routeId);
         if (route == null || !route.getUserId().equals(userId)) {
-            return "该路线不存在或您没有权限删除此路线";  // 如果路线不存在或不属于该用户，返回错误信息
+            return Result.error("该路线不存在或您没有权限删除此路线");
         }
 
-        userRouteService.deleteRoute(routeId);  // 调用服务层删除路线
-        return "删除成功";  // 返回删除成功信息
+        userRouteService.deleteRoute(routeId);
+        return Result.success(null, "删除成功");
     }
 
     /**
@@ -94,7 +95,7 @@ public class UserRouteController {
      */
     @GetMapping("/{userId}/list")
     @ApiOperation(value = "分页获取用户的路线", notes = "根据用户 ID 分页获取用户的所有路线")
-    public PageInfo<UserRoute> getRoutesByPage(
+    public Result<PageInfo<UserRoute>> getRoutesByPage(
             @ApiParam(value = "用户的 JWT Token", required = true) @RequestHeader("Authorization") String token,
             @ApiParam(value = "用户的 ID", required = true) @PathVariable Integer userId,
             @ApiParam(value = "页码", defaultValue = "1") @RequestParam(defaultValue = "1") int pageNo,
@@ -103,11 +104,12 @@ public class UserRouteController {
         // 验证 Token 用户和请求中的用户是否匹配
         Integer tokenUserId = getUserIdFromToken(token);
         if (tokenUserId == null || !tokenUserId.equals(userId)) {
-            throw new SecurityException("无效的Token，无法验证用户身份");
+            return Result.error("无效的Token，无法验证用户身份");
         }
 
         // 调用 Service 层获取分页后的路线列表
-        return userRouteService.getUserRoutesPaged(userId, pageNo, pageSize);
+        PageInfo<UserRoute> pageInfo = userRouteService.getUserRoutesPaged(userId, pageNo, pageSize);
+        return Result.success(pageInfo);
     }
 
 
@@ -124,7 +126,7 @@ public class UserRouteController {
      */
     @GetMapping("/{userId}/search")
     @ApiOperation(value = "综合搜索用户路线", notes = "根据关键词、时间范围等条件搜索用户的路线")
-    public List<UserRoute> searchRoutes(
+    public Result<List<UserRoute>> searchRoutes(
             @ApiParam(value = "用户的 JWT Token", required = true) @RequestHeader("Authorization") String token,
             @ApiParam(value = "用户的 ID", required = true) @PathVariable Integer userId,
             @ApiParam(value = "搜索关键词", required = false) @RequestParam(required = false) String keyword,
@@ -135,10 +137,11 @@ public class UserRouteController {
 
         Integer tokenUserId = getUserIdFromToken(token);
         if (tokenUserId == null || !tokenUserId.equals(userId)) {
-            throw new SecurityException("无效的Token，无法验证用户身份");  // Token 无效或用户不匹配时，抛出异常
+            return Result.error("无效的Token，无法验证用户身份");
         }
 
         // 调用服务层进行综合搜索并返回分页查询结果
-        return userRouteService.searchUserRoutes(userId, keyword, startTime, endTime, page, size);
+        List<UserRoute> routes = userRouteService.searchUserRoutes(userId, keyword, startTime, endTime, page, size);
+        return Result.success(routes);
     }
 }

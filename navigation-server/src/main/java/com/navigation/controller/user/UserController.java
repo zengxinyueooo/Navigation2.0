@@ -32,12 +32,24 @@ public class UserController {
     @PostMapping("/login")
     @ApiOperation(value = "用户登录", notes = "用户输入账号、密码和角色进行登录，角色为 user 或 admin")
     @ApiResponses({
-            @ApiResponse(code = 200, message = "登录成功，返回 token", response = Map.class),
-            @ApiResponse(code = 400, message = "登录失败，账号或密码错误")
+            @ApiResponse(code = 1, message = "登录成功，返回 token", response = Result.class),
+            @ApiResponse(code = 0, message = "登录失败，账号或密码错误")
     })
-    public Map<String, Object> userLogin(
+    public Result<Map<String, Object>> userLogin(
             @RequestBody @ApiParam(value = "登录请求数据", required = true) LoginDto loginDto) {
-        return userService.LoginUser(loginDto);
+        Map<String, Object> result = userService.LoginUser(loginDto);
+        Integer code = (Integer) result.get("code");
+
+        if (code != null && code == 200) {
+            // 登录成功，返回 token 和 role
+            Map<String, Object> data = new java.util.HashMap<>();
+            data.put("token", result.get("token"));
+            data.put("role", result.get("role"));
+            return Result.success(data, (String) result.get("message"));
+        } else {
+            // 登录失败
+            return Result.error((String) result.get("message"));
+        }
     }
 
     /**
@@ -46,16 +58,16 @@ public class UserController {
     @PostMapping("/register")
     @ApiOperation(value = "用户注册", notes = "用户输入必要信息进行注册，并在注册成功后提示用户前往邮箱激活账号")
     @ApiResponses({
-            @ApiResponse(code = 200, message = "注册成功，请前往邮箱激活账号", response = Map.class),
-            @ApiResponse(code = 400, message = "注册失败，邮箱已存在或其他错误")
+            @ApiResponse(code = 1, message = "注册成功，请前往邮箱激活账号", response = Result.class),
+            @ApiResponse(code = 0, message = "注册失败，邮箱已存在或其他错误")
     })
-    public Map<String, Object> registerUser(
+    public Result<String> registerUser(
             @RequestBody @ApiParam(value = "注册请求数据", required = true) RegisterDto registerDto) {
         Map<String, Object> result = userService.RegisterUser(registerDto);
         if (result == null || !"success".equals(result.get("status"))) {
-            return Map.of("status", "failure", "message", result != null ? result.get("message") : "注册失败");
+            return Result.error(result != null ? (String) result.get("message") : "注册失败");
         } else {
-            return Map.of("status", "success", "message", "注册成功，请前往邮箱激活账号");
+            return Result.success(null, (String) result.get("message"));
         }
     }
 
@@ -66,11 +78,18 @@ public class UserController {
     @ApiOperation(value = "账号激活", notes = "用户点击邮件中的激活链接进行账号激活")
     @ApiImplicitParam(name = "confirmCode", value = "激活码", required = true, paramType = "query", dataType = "String")
     @ApiResponses({
-            @ApiResponse(code = 200, message = "激活成功", response = Map.class),
-            @ApiResponse(code = 400, message = "激活失败，激活码无效")
+            @ApiResponse(code = 1, message = "激活成功", response = Result.class),
+            @ApiResponse(code = 0, message = "激活失败，激活码无效")
     })
-    public Map<String, Object> activationAccount(@RequestParam String confirmCode) {
-        return userService.activationAccount(confirmCode);
+    public Result<String> activationAccount(@RequestParam String confirmCode) {
+        Map<String, Object> result = userService.activationAccount(confirmCode);
+        Integer code = (Integer) result.get("code");
+
+        if (code != null && code == 200) {
+            return Result.success(null, (String) result.get("message"));
+        } else {
+            return Result.error((String) result.get("message"));
+        }
     }
 
     /**
@@ -79,32 +98,30 @@ public class UserController {
     @GetMapping("/profile")
     @ApiOperation(value = "获取当前登录用户信息", notes = "通过请求头携带的 JWT Token 获取当前用户信息")
     @ApiResponses({
-            @ApiResponse(code = 200, message = "获取成功", response = Map.class),
-            @ApiResponse(code = 401, message = "Token 无效或已过期")
+            @ApiResponse(code = 1, message = "获取成功", response = Result.class),
+            @ApiResponse(code = 0, message = "Token 无效或已过期")
     })
-    public Map<String, Object> getUserProfile(@RequestHeader("Authorization") String token) {
+    public Result<User> getUserProfile(@RequestHeader("Authorization") String token) {
         try {
             // 解析 token 获取用户 ID
             Integer userId = JwtUtils.getUserId(token);
 
             if (userId == null) {
-
-                return Map.of("status", "failure", "message", "Token 无效或已过期");
+                return Result.error("Token 无效或已过期");
             }
 
             // 调用服务层获取用户信息
             Map<String, Object> userProfile = userService.getUserProfile(token);
 
             if ("success".equals(userProfile.get("status"))) {
-                return userProfile;  // 返回获取的用户信息
+                return Result.success((User) userProfile.get("user"), (String) userProfile.get("message"));
             } else {
-                return Map.of("status", "failure", "message", "用户信息未找到");
+                return Result.error("用户信息未找到");
             }
         } catch (Exception e) {
             System.out.println("异常信息：" + e.getMessage());
             e.printStackTrace();
-
-            return Map.of("status", "failure", "message", "Token 无效或已过期");
+            return Result.error("Token 无效或已过期");
         }
     }
 
@@ -117,10 +134,10 @@ public class UserController {
     @PutMapping("/update")
     @ApiOperation(value = "用户修改个人信息", notes = "用户修改自己的昵称、性别、年龄、头像、密码等信息")
     @ApiResponses({
-            @ApiResponse(code = 200, message = "修改成功", response = Map.class),
-            @ApiResponse(code = 400, message = "修改失败")
+            @ApiResponse(code = 1, message = "修改成功", response = Result.class),
+            @ApiResponse(code = 0, message = "修改失败")
     })
-    public Map<String, Object> updateUserPersonalInfo(
+    public Result<String> updateUserPersonalInfo(
             @RequestBody @ApiParam(value = "修改个人信息请求数据", required = true) User user,
             @RequestHeader("Authorization") String token) {
 
@@ -129,23 +146,23 @@ public class UserController {
             Integer userId = JwtUtils.getUserId(token);  // 获取 Integer 类型的 userId
 
             if (userId == null) {
-                return Map.of("status", "failure", "message", "Token 无效或已过期");
+                return Result.error("Token 无效或已过期");
             }
 
             // 确保修改的是当前用户的个人信息
             if (userId == null || !userId.equals(user.getUserId())) {
-                return Map.of("status", "failure", "message", "无法修改其他用户的信息");
+                return Result.error("无法修改其他用户的信息");
             }
 
             // 调用服务层进行更新
             boolean isUpdated = userService.updateUserPersonalInfo(user);
             if (isUpdated) {
-                return Map.of("status", "success", "message", "修改成功");
+                return Result.success(null, "修改成功");
             } else {
-                return Map.of("status", "failure", "message", "修改失败");
+                return Result.error("修改失败");
             }
         } catch (Exception e) {
-            return Map.of("status", "failure", "message", "Token 无效或已过期");
+            return Result.error("Token 无效或已过期");
         }
     }
 

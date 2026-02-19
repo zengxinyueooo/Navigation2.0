@@ -2,6 +2,7 @@ package com.navigation.controller;
 
 import com.navigation.aiservice.ConsultantService;
 import com.navigation.context.BaseContext;
+import com.navigation.result.Result;
 import com.navigation.service.ChatSessionService;
 import com.navigation.service.ChatStreamService;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ public class ChatController {
 
     // 非流式版本 - 避免LangChain4J 0.30.0的Flux bug（必须登录，自动从token获取userId）
     @GetMapping(value = "/chat", produces = "application/json;charset=utf-8")
-    public String chat(
+    public Result<String> chat(
         @RequestParam("memoryId") String memoryId,
         @RequestParam("message") String message
     ) {
@@ -42,10 +43,11 @@ public class ChatController {
         Integer userId = BaseContext.getUserId();
         if (!chatSessionService.validateSession(userId != null ? userId.longValue() : null, memoryId)) {
             log.warn("[ChatController] 权限验证失败 | memoryId={} | userId={}", memoryId, userId);
-            return "{\"error\": \"无权访问该会话\"}";
+            return Result.error("无权访问该会话");
         }
 
-        return consultantService.chat(memoryId, message);
+        String response = consultantService.chat(memoryId, message);
+        return Result.success(response);
     }
 
     // 流式版本 - 使用自定义实现绕过LangChain4J的Flux bug（必须登录，自动从token获取userId）

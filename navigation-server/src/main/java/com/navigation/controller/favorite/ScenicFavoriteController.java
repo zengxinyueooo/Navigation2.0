@@ -52,10 +52,10 @@ public class ScenicFavoriteController {
     }
 
     @GetMapping("/queryPage")
-    public PageResult queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryPageByUserId(@RequestParam(defaultValue = "1") Integer page,
                                           @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return scenicFavoriteService.queryPageByUserId(page,pageSize);
+        return Result.success(scenicFavoriteService.queryPageByUserId(page,pageSize));
     }
 
     // 根据用户ID查询该用户的所有收藏景点记录

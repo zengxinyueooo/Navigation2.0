@@ -37,10 +37,10 @@ public class TicketReservationController {
     }
 
     @GetMapping("/query")
-    public PageResult queryTicketReservation(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryTicketReservation(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return ticketReservationService.queryTicketReservation(page,pageSize);
+        return Result.success(ticketReservationService.queryTicketReservation(page,pageSize));
     }
 
     /*@GetMapping("/queryById")

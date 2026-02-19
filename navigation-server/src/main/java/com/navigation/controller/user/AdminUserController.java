@@ -2,6 +2,7 @@ package com.navigation.controller.user;
 
 import com.github.pagehelper.PageInfo;
 import com.navigation.entity.User;
+import com.navigation.result.Result;
 import com.navigation.service.AdminUserService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -25,7 +26,7 @@ public class AdminUserController {
             notes = "根据邮箱或昵称进行条件查询，返回分页后的用户列表"
     )
     @GetMapping("/search")
-    public PageInfo<User> searchUsers(
+    public Result<PageInfo<User>> searchUsers(
             @RequestParam(required = false)
             @ApiParam(value = "查询条件：用户邮箱", required = false) String email,
 
@@ -38,7 +39,8 @@ public class AdminUserController {
             @RequestParam(defaultValue = "10")
             @ApiParam(value = "每页显示的条数", defaultValue = "10") int pageSize
     ) {
-        return adminUserService.getUsersByCondition(pageNum, pageSize, email, nickName);
+        PageInfo<User> pageInfo = adminUserService.getUsersByCondition(pageNum, pageSize, email, nickName);
+        return Result.success(pageInfo);
     }
 
     /**
@@ -49,25 +51,31 @@ public class AdminUserController {
             notes = "返回所有用户信息并分页展示，按照账号创建时间进行排序"
     )
     @GetMapping("/all")
-    public PageInfo<User> getAllUsers(
+    public Result<PageInfo<User>> getAllUsers(
             @RequestParam(defaultValue = "1")
             @ApiParam(value = "当前页码", defaultValue = "1") int pageNum,
 
             @RequestParam(defaultValue = "10")
             @ApiParam(value = "每页显示的条数", defaultValue = "10") int pageSize
     ) {
-        return adminUserService.getAllUsers(pageNum, pageSize);
+        PageInfo<User> pageInfo = adminUserService.getAllUsers(pageNum, pageSize);
+        return Result.success(pageInfo);
     }
     /**
      * 根据用户ID删除用户
      */
     @ApiOperation(value = "根据ID删除用户", notes = "根据用户ID删除指定的用户")
     @DeleteMapping("/delete/{userId}")
-    public boolean deleteUser(
+    public Result<String> deleteUser(
             @PathVariable
             @ApiParam(value = "用户ID", required = true) Integer userId
     ) {
-        return adminUserService.deleteUserById(userId);
+        boolean success = adminUserService.deleteUserById(userId);
+        if (success) {
+            return Result.success(null, "删除成功");
+        } else {
+            return Result.error("删除失败");
+        }
     }
     /**
      * 根据用户ID修改用户的昵称、性别、年龄、是否有效状态和角色
@@ -75,10 +83,15 @@ public class AdminUserController {
      */
     @ApiOperation(value = "根据ID修改用户信息", notes = "根据用户ID修改用户的昵称、性别、年龄、是否有效状态和角色")
     @PutMapping("/update")
-    public boolean updateUserInfo(
+    public Result<String> updateUserInfo(
             @RequestBody
             @ApiParam(value = "用户信息对象", required = true) User user
     ) {
-        return adminUserService.updateUserInfo(user);
+        boolean success = adminUserService.updateUserInfo(user);
+        if (success) {
+            return Result.success(null, "更新成功");
+        } else {
+            return Result.error("更新失败");
+        }
     }
 }

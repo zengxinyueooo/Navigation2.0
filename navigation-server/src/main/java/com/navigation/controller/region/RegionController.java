@@ -42,10 +42,10 @@ public class RegionController {
     }
 
     @GetMapping("/query")
-    public PageResult queryRegion(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryRegion(@RequestParam(defaultValue = "1") Integer page,
                                   @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return regionService.queryRegion(page,pageSize);
+        return Result.success(regionService.queryRegion(page,pageSize));
     }
 
     @GetMapping("/queryById")

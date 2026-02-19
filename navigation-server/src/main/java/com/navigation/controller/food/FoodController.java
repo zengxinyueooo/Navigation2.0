@@ -39,10 +39,11 @@ public class FoodController {
     }
 
     @GetMapping("/query")
-    public PageResult queryFood(@RequestParam(defaultValue = "1") Integer page,
+    public Result<PageResult> queryFood(@RequestParam(defaultValue = "1") Integer page,
                                  @RequestParam(defaultValue = "5") Integer pageSize){
         //两个参数分别指：从第几页开始查，每页的个数有多少
-        return foodService.queryFood(page,pageSize);
+        PageResult pageResult = foodService.queryFood(page,pageSize);
+        return Result.success(pageResult);
     }
 
     @GetMapping("/queryByRegionId")
