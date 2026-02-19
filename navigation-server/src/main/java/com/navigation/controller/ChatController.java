@@ -2,6 +2,7 @@ package com.navigation.controller;
 
 import com.navigation.aiservice.ConsultantService;
 import com.navigation.context.BaseContext;
+import com.navigation.service.ChatSessionService;
 import com.navigation.service.ChatStreamService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +26,9 @@ public class ChatController {
     @Autowired
     private ChatStreamService chatStreamService;
 
+    @Autowired
+    private ChatSessionService chatSessionService;
+
     @Autowired(required = false)
     private Executor taskExecutor;
 
@@ -34,8 +38,13 @@ public class ChatController {
         @RequestParam("memoryId") String memoryId,
         @RequestParam("message") String message
     ) {
-        // userId已经由JWT拦截器自动解析并存入BaseContext
-        // 拦截器会自动验证登录状态，这里无需再验证
+        // 验证会话所有权
+        Integer userId = BaseContext.getUserId();
+        if (!chatSessionService.validateSession(userId != null ? userId.longValue() : null, memoryId)) {
+            log.warn("[ChatController] 权限验证失败 | memoryId={} | userId={}", memoryId, userId);
+            return "{\"error\": \"无权访问该会话\"}";
+        }
+
         return consultantService.chat(memoryId, message);
     }
 
@@ -47,8 +56,18 @@ public class ChatController {
     ) {
         SseEmitter emitter = new SseEmitter(60000L); // 60秒超时
 
-        // userId已经由JWT拦截器自动解析并存入BaseContext
-        // 拦截器会自动验证登录状态，这里无需再验证
+        // 验证会话所有权
+        Integer userId = BaseContext.getUserId();
+        if (!chatSessionService.validateSession(userId != null ? userId.longValue() : null, memoryId)) {
+            log.warn("[ChatController] 权限验证失败 | memoryId={} | userId={}", memoryId, userId);
+            try {
+                emitter.send(com.navigation.utils.StreamEventVOBuilder.buildErrorEvent("无权访问该会话"));
+                emitter.complete();
+            } catch (IOException ex) {
+                emitter.completeWithError(ex);
+            }
+            return emitter;
+        }
 
         // 使用Spring管理的线程池执行异步任务,保持Spring上下文
         if (taskExecutor != null) {

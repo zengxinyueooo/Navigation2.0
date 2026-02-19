@@ -75,13 +75,27 @@ public class ChatSessionController {
     }
 
     /**
-     * 获取会话的历史消息
+     * 获取会话的历史消息（必须登录，只能查看自己的会话）
      * @param sessionId 会话ID
      * @return 消息列表
      */
     @GetMapping("/{sessionId}/messages")
     public Result<List<ChatMessageVO>> getSessionMessages(@PathVariable("sessionId") String sessionId) {
-        List<ChatMessageVO> messages = chatSessionService.getSessionMessages(sessionId);
-        return Result.success(messages);
+        try {
+            Integer userId = BaseContext.getUserId();
+
+            // 验证会话所有权
+            if (!chatSessionService.validateSession(userId != null ? userId.longValue() : null, sessionId)) {
+                log.warn("[ChatSessionController] 权限验证失败 | sessionId={} | userId={}", sessionId, userId);
+                return Result.error("无权访问该会话");
+            }
+
+            List<ChatMessageVO> messages = chatSessionService.getSessionMessages(sessionId);
+            return Result.success(messages);
+        } catch (RuntimeException e) {
+            log.error("[ChatSessionController] 获取会话消息失败 | sessionId={} | error={}",
+                sessionId, e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 }
