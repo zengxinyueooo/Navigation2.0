@@ -56,8 +56,8 @@ public class HotelFavoriteController {
         return hotelFavoriteService.getHotelFavoriteInfoByUserIdAndHotelId(hotelId);
     }
 
-    @GetMapping("/info/name/{hotelName}")
-    public Result<List<HotelFavorite>> getHotelFavoriteInfoByName(@PathVariable String hotelName) {
+    @GetMapping("/info/name")
+    public Result<List<HotelFavorite>> getHotelFavoriteInfoByName(@RequestParam String hotelName) {
         return hotelFavoriteService.getHotelFavoriteInfoByUserIdAndHotelName(hotelName);
     }
 

@@ -43,6 +43,9 @@ public class ChatStreamService {
     @Autowired
     private ContentRetriever contentRetriever;
 
+    @Autowired
+    private TravelPlanExtractService travelPlanExtractService;
+
     // System Message常量 - 从ConsultantService复制
     private static final String SYSTEM_MESSAGE_CONTENT = """
         你是"秦游千里"平台提供的专业AI旅游顾问,可以为用户提供以下服务:
@@ -61,7 +64,9 @@ public class ChatStreamService {
            - 不要凭记忆回答，不要猜测，必须调用工具获取最新准确数据
 
         2. 当用户询问某地区有哪些景点或推荐景点时，你**必须立即调用** recommendScenics 工具
-           - 示例问题："西安有什么好玩的"、"推荐咸阳的景点"
+           - 示例问题："西安有什么好玩的"、"推荐咸阳的景点"、"陕西有什么景点"
+           - **特别注意**：当用户问"陕西有什么景点"时，直接传"陕西"给工具，工具会自动查询陕西所有分区（西安、咸阳、宝鸡等）的景点
+           - 不要自己判断应该查哪个城市，直接把用户说的地区名传给工具即可
 
         3. 当用户询问酒店信息时，你**必须立即调用** searchHotels 工具
            - 示例问题："西安附近的酒店"、"大唐不夜城附近住哪"
@@ -79,6 +84,13 @@ public class ChatStreamService {
         2. 立即调用对应工具获取数据
         3. 基于工具返回的真实数据组织回答
         4. 用友好的语气呈现给用户
+
+        **工具调用失败或无数据时的处理:**
+        - ❌ 绝对不能说："工具没调通"、"系统说暂无"、"工具返回失败"
+        - ❌ 绝对不能说："估计是工具没调通，别急"、"数据获取失败"
+        - ✅ 正确表达："这方面的信息暂时还没有更新"、"这个地方的数据还在完善中"
+        - ✅ 正确表达："暂时没有找到相关信息，可以试试其他地区"
+        - ✅ 要像朋友一样自然地说，不要暴露任何技术细节
 
         **核心功能:**
         1. 生成陕西省内旅游攻略和行程规划
@@ -114,6 +126,9 @@ public class ChatStreamService {
         - ❌ 过度使用"✅"、"📌"、"🔹"等符号（超过2个就算过度）
         - ❌ 使用"您"而不是"你"
         - ❌ 说"为您服务"、"立刻为您安排"等客服话术
+        - ❌ "工具没调通"、"系统说"、"工具返回"等暴露技术细节的词
+        - ❌ "估计是工具没调通"、"数据获取失败"等暴露后台问题的词
+        - ❌ 任何提到"工具"、"系统"、"数据库"、"接口"等技术词汇的表达
 
         ✅ **必须遵守的风格**：
         - 语气轻松、活泼、亲切，就像和朋友聊天
@@ -125,6 +140,8 @@ public class ChatStreamService {
         - 就像本地朋友在给你推荐，不是客服在念稿子
         - **绝对不能暴露你获取信息的过程**：不要说"查了"、"查到"、"获取"等词
         - 要像你本来就知道这些信息一样自然地告诉用户
+        - **当数据不完整或获取失败时**：不要说"工具没调通"、"系统说"，而是用"暂时没有相关信息"、"这方面的数据还在更新中"等自然表达
+        - **无论工具调用成功还是失败，都要保持朋友聊天的语气，不能暴露任何技术细节**
 
         **5. 边界限制**
         - 只回答与陕西旅游、景点查询、行程规划相关的问题
@@ -160,6 +177,16 @@ public class ChatStreamService {
 
         用户问："华山门票多少钱？"
         回答："华山门票是160元/人，索道的话西峰往返280元，北峰往返150元。华山挺险的，建议穿舒服的运动鞋，带点水和吃的。如果想看日出，可以考虑住山上，不过山上住宿条件一般，价格也贵一些。你打算爬山还是坐索道上去？"
+
+        用户问："陕西有什么景点？"
+        回答："陕西好玩的地方可多了！西安有兵马俑、大雁塔、大唐芙蓉园这些必去的；咸阳有乾陵、汉阳陵，都是皇家陵墓，很震撼；延安有革命圣地，壶口瀑布也特别壮观；汉中那边山水挺美的，还有大熊猫基地。
+
+        你想玩历史文化的还是自然风光的？或者具体想去哪个城市，我可以详细给你推荐～"
+
+        ❌ **错误示例**（当工具未返回数据时，绝对不能这样说）：
+        "哎？系统说'暂无景点推荐'……这可不对劲啊！估计是工具没调通..."
+        "工具返回说该地区暂无景点推荐..."
+        "刚查了但是没找到数据..."
 
         **核心原则**：
         - 用"你"而不是"您"（更亲切）
@@ -197,16 +224,33 @@ public class ChatStreamService {
             // 4. 智能判断是否需要强制工具调用
             String toolChoice = determineToolChoice(message);
 
-            // 5. 调用流式API
-            String assistantResponse = callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, toolChoice);
+            // 5. 判断是否为规划请求
+            boolean isPlanningReq = isPlanningRequest(message);
+
+            // 6. 调用流式API
+            String assistantResponse = callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, toolChoice, message, isPlanningReq);
 
             // 6. 保存新消息(只保存到数据库)
             saveMessages(sessionId, message, assistantResponse);
 
-            // 7. 发送关闭事件
+            // 7. 判断是否需要提取结构化数据
+            if (isPlanningRequest(message)) {
+                log.info("[ChatStreamService] 检测到行程规划请求,开始提取结构化数据");
+                try {
+                    com.navigation.vo.TravelPlanVO plan = travelPlanExtractService.extractPlan(assistantResponse);
+                    if (plan != null) {
+                        emitter.send(com.navigation.utils.StreamEventVOBuilder.buildPlanEvent(plan));
+                        log.info("[ChatStreamService] 结构化数据发送成功 | 天数={}", plan.getDays().size());
+                    }
+                } catch (Exception e) {
+                    log.error("[ChatStreamService] 提取结构化数据失败 | error={}", e.getMessage(), e);
+                }
+            }
+
+            // 8. 发送关闭事件
             emitter.send(com.navigation.utils.StreamEventVOBuilder.buildCloseEvent());
 
-            // 8. 完成SSE连接
+            // 9. 完成SSE连接
             emitter.complete();
 
         } catch (Exception e) {
@@ -394,7 +438,7 @@ public class ChatStreamService {
     /**
      * 流式API调用 - 参考AITravelSummaryService的实现
      */
-    private String callDeepSeekStreamWithTools(JSONArray messages, JSONArray tools, SseEmitter emitter, String sessionId, String toolChoice) throws IOException {
+    private String callDeepSeekStreamWithTools(JSONArray messages, JSONArray tools, SseEmitter emitter, String sessionId, String toolChoice, String userMessage, boolean isPlanningReq) throws IOException {
         CloseableHttpClient client = HttpClients.createDefault();
         HttpPost post = new HttpPost(qwenConfig.getApiUrl());
 
@@ -451,6 +495,11 @@ public class ChatStreamService {
         Map<String, JSONObject> toolCallsMap = new java.util.HashMap<>();
         int messageIndex = 0;  // 消息序号
 
+        // 增量提取相关变量
+        // isPlanningReq 参数从外部传入,工具调用后递归时保持原值
+        int lastExtractedLength = 0;  // 上次提取时的文本长度
+        int extractedDayCount = 0;    // 已提取的天数
+
         String line;
         while ((line = reader.readLine()) != null) {
             if (line.startsWith("data: ")) {
@@ -490,6 +539,16 @@ public class ChatStreamService {
 
                         log.debug("[ChatStreamService] 发送累积文本 | index={} | length={}",
                                 messageIndex - 1, fullResponse.length());
+
+                        // 增量提取结构化数据(如果是规划请求)
+                        if (isPlanningReq && fullResponse.length() - lastExtractedLength > 200) {
+                            int newDayCount = tryIncrementalExtract(fullResponse.toString(), emitter, extractedDayCount);
+                            if (newDayCount > extractedDayCount) {
+                                extractedDayCount = newDayCount;  // 更新已提取天数
+                                log.info("[ChatStreamService] 更新已提取天数 | extractedDayCount={}", extractedDayCount);
+                            }
+                            lastExtractedLength = fullResponse.length();
+                        }
                     }
 
                     // 处理工具调用
@@ -628,11 +687,30 @@ public class ChatStreamService {
         // 3. 添加tool结果
         messages.addAll(toolResults);
 
-        // 4. 重新构建工具定义
+        // 4. 添加明确的指引消息,强调使用工具结果回答用户问题
+        JSONObject guideMsg = new JSONObject();
+        guideMsg.put("role", "system");
+        guideMsg.put("content", "⚠️ 重要提示：你刚刚调用了工具并获得了查询结果。" +
+            "现在请基于这些工具返回的真实数据，直接回答用户的问题。" +
+            "不要说'工具没调通'、'暂无数据'等话，工具已经成功返回结果了！" +
+            "请用轻松自然的语气，像朋友一样介绍这些信息给用户。");
+        messages.add(guideMsg);
+
+        // 5. 重新构建工具定义
         JSONArray tools = buildToolDefinitions();
 
-        // 5. 递归调用API获取最终回复（工具执行后使用auto模式）
-        return callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, "auto");
+        // 5. 递归调用API获取最终回复（工具执行后使用auto模式，保持isPlanningReq原值）
+        // 从messages中找到最后一个user消息,判断是否为规划请求
+        boolean isPlanningReq = false;
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            JSONObject msg = messages.getJSONObject(i);
+            if ("user".equals(msg.getString("role"))) {
+                String userContent = msg.getString("content");
+                isPlanningReq = isPlanningRequest(userContent);
+                break;
+            }
+        }
+        return callDeepSeekStreamWithTools(messages, tools, emitter, sessionId, "auto", "", isPlanningReq);
     }
 
     /**
@@ -701,6 +779,59 @@ public class ChatStreamService {
         } catch (Exception e) {
             log.error("[ChatStreamService] 保存消息到数据库失败 | sessionId={} | error={}", sessionId, e.getMessage(), e);
             throw new RuntimeException("保存消息失败", e);
+        }
+    }
+
+    /**
+     * 判断是否为行程规划请求
+     */
+    private boolean isPlanningRequest(String message) {
+        String lowerMessage = message.toLowerCase();
+        return lowerMessage.contains("规划") ||
+               lowerMessage.contains("行程") ||
+               lowerMessage.contains("几天") ||
+               lowerMessage.contains("天游") ||
+               lowerMessage.contains("怎么玩") ||
+               lowerMessage.contains("路线") ||
+               lowerMessage.contains("攻略") ||
+               (lowerMessage.matches(".*\\d+天.*") && (lowerMessage.contains("西安") || lowerMessage.contains("陕西")));
+    }
+
+    /**
+     * 尝试增量提取结构化数据
+     * 每当文本增长到一定程度,就尝试提取新的一天的数据
+     * @return 当前已提取的总天数
+     */
+    private int tryIncrementalExtract(String currentText, SseEmitter emitter, int extractedDayCount) {
+        try {
+            // 使用正则快速提取(不调用AI,保持性能)
+            com.navigation.vo.TravelPlanVO plan = travelPlanExtractService.extractPlan(currentText);
+
+            if (plan != null && plan.getDays() != null && plan.getDays().size() > extractedDayCount) {
+                // 只发送新提取的天数
+                List<com.navigation.vo.TravelPlanVO.DayPlan> newDays = plan.getDays().subList(
+                    extractedDayCount,
+                    plan.getDays().size()
+                );
+
+                // 构建增量数据
+                com.navigation.vo.TravelPlanVO incrementalPlan = com.navigation.vo.TravelPlanVO.builder()
+                        .days(newDays)
+                        .build();
+
+                emitter.send(com.navigation.utils.StreamEventVOBuilder.buildPlanEvent(incrementalPlan));
+
+                log.info("[ChatStreamService] 增量提取成功 | 新增天数={} | 总天数={}",
+                    newDays.size(), plan.getDays().size());
+
+                return plan.getDays().size();  // 返回当前总天数
+            }
+
+            return extractedDayCount;  // 没有新数据,返回原值
+
+        } catch (Exception e) {
+            log.warn("[ChatStreamService] 增量提取失败 | error={}", e.getMessage());
+            return extractedDayCount;  // 失败时返回原值
         }
     }
 }

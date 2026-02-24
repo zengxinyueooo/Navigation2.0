@@ -69,8 +69,25 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 其他需要登录的接口可以在这里添加
-        // 例如：预约、评论、收藏等
+        // 预订相关接口必须登录
+        if (uri.startsWith("/ticket_reservation") || uri.startsWith("/scenic_reservation")) {
+            return true;
+        }
+
+        // 收藏相关接口必须登录
+        if (uri.startsWith("/scenic/favorite") || uri.startsWith("/hotel/favorite")) {
+            return true;
+        }
+
+        // 路线规划接口必须登录
+        if (uri.startsWith("/api/user-routes")) {
+            return true;
+        }
+
+        // 用户个人信息相关接口必须登录
+        if (uri.equals("/users/profile") || uri.equals("/users/update") || uri.equals("/users/updatePassword")) {
+            return true;
+        }
 
         return false;
     }

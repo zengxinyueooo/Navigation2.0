@@ -2,6 +2,8 @@ package com.navigation.service;
 
 import com.github.pagehelper.PageInfo;
 import com.navigation.entity.User;
+import com.navigation.result.PageResult;
+import com.navigation.vo.UserVO;
 
 import java.util.List;
 
@@ -10,12 +12,12 @@ public interface AdminUserService {
     /**
      * 根据条件（邮箱或昵称）进行分页查询
      */
-    PageInfo<User> getUsersByCondition(int pageNum, int pageSize, String email, String nickName);
+    PageResult<UserVO> getUsersByCondition(int pageNum, int pageSize, String email, String nickName);
 
     /**
      * 查询所有用户并分页，按账号创建时间排序
      */
-    PageInfo<User> getAllUsers(int pageNum, int pageSize);
+    PageResult<UserVO> getAllUsers(int pageNum, int pageSize);
     /**
      * 根据用户ID删除用户
      * @param userId 用户ID

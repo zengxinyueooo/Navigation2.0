@@ -1,15 +1,20 @@
 package com.navigation.service.impl;
 
+import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.navigation.entity.User;
 import com.navigation.mapper.AdminUserServiceMapper;
+import com.navigation.result.PageResult;
 import com.navigation.service.AdminUserService;
+import com.navigation.vo.UserVO;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminUserControllerServiceImpl implements AdminUserService {
@@ -21,30 +26,48 @@ public class AdminUserControllerServiceImpl implements AdminUserService {
      * 根据条件（邮箱或昵称）进行分页查询
      */
     @Override
-    public PageInfo<User> getUsersByCondition(int pageNum, int pageSize, String email, String nickName) {
+    public PageResult<UserVO> getUsersByCondition(int pageNum, int pageSize, String email, String nickName) {
         // 启动分页功能
         PageHelper.startPage(pageNum, pageSize);
 
         // 查询符合条件的用户
         List<User> userList = adminUserServiceMapper.findUsersByCondition(email, nickName);
+        Page<User> page = (Page<User>) userList;
 
-        // 使用 PageInfo 封装分页数据
-        return new PageInfo<>(userList);
+        // 转换为 UserVO（过滤敏感信息）
+        List<UserVO> userVOList = userList.stream().map(this::convertToUserVO).collect(Collectors.toList());
+
+        // 使用简化的 PageResult 封装分页数据
+        return new PageResult<>(page.getTotal(), userVOList);
     }
 
     /**
      * 查询所有用户并分页，按账号创建时间排序
      */
     @Override
-    public PageInfo<User> getAllUsers(int pageNum, int pageSize) {
+    public PageResult<UserVO> getAllUsers(int pageNum, int pageSize) {
         // 启动分页功能
         PageHelper.startPage(pageNum, pageSize);
 
         // 查询所有用户并按账号创建时间排序
         List<User> userList = adminUserServiceMapper.findAllUsers();
+        Page<User> page = (Page<User>) userList;
 
-        // 使用 PageInfo 封装分页数据
-        return new PageInfo<>(userList);
+        // 转换为 UserVO（过滤敏感信息）
+        List<UserVO> userVOList = userList.stream().map(this::convertToUserVO).collect(Collectors.toList());
+
+        // 使用简化的 PageResult 封装分页数据
+        return new PageResult<>(page.getTotal(), userVOList);
+    }
+
+    /**
+     * 将 User 转换为 UserVO，过滤敏感信息
+     */
+    private UserVO convertToUserVO(User user) {
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        // password, salt, confirmCode 不会被复制，因为 UserVO 中没有这些字段
+        return userVO;
     }
     /**
      * 根据用户ID删除用户

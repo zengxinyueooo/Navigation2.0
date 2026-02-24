@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StreamEventVO {
     /**
-     * 事件类型: open, message, close, error
+     * 事件类型: open, message, close, error, plan(结构化行程数据)
      */
     private String type;
 
@@ -21,7 +21,12 @@ public class StreamEventVO {
     private Integer index;
 
     /**
-     * 数据体
+     * 数据体(文本消息)
      */
     private StreamEventDataVO data;
+
+    /**
+     * 结构化行程数据(仅plan类型有)
+     */
+    private TravelPlanVO plan;
 }

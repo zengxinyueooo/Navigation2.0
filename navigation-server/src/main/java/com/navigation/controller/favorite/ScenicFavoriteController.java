@@ -46,8 +46,8 @@ public class ScenicFavoriteController {
     }
 
     // 根据用户ID和景点名称查询该景点收藏信息
-    @GetMapping("/info/name/{scenicName}")
-    public Result<List<ScenicFavorite>> getFavoriteInfoByName(@PathVariable String scenicName) {
+    @GetMapping("/info/name")
+    public Result<List<ScenicFavorite>> getFavoriteInfoByName(@RequestParam String scenicName) {
         return scenicFavoriteService.getFavoriteInfoByUserIdAndScenicName(scenicName);
     }
 

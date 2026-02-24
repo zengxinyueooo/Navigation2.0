@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -95,18 +96,65 @@ public class AITravelTools {
         log.info("[AITravelTools] recommendScenics被调用 | regionName={} | scenicService={}",
             regionName, (scenicService != null ? scenicService.getClass().getName() : "NULL"));
 
-        // 调用查询方法，获取景点列表
-        Result<List<Scenic>> result = scenicService.queryPageByRegionName(1, 10, regionName);
+        // 特殊处理：如果用户问"陕西"，则查询所有陕西分区的景点
+        List<String> shaanxiRegions = Arrays.asList("西安", "咸阳", "宝鸡", "渭南", "延安", "榆林", "汉中", "安康", "商洛", "铜川");
 
-        // 如果没有找到景点，返回提示信息
-        if (result == null || result.getData() == null || result.getData().isEmpty()) {
-            return "该地区暂无景点推荐。";
+        List<Scenic> allScenics = new ArrayList<>();
+
+        if ("陕西".equals(regionName) || "陕西省".equals(regionName)) {
+            log.info("[AITravelTools] 检测到陕西省级查询，将查询所有分区景点");
+            // 查询所有陕西分区的景点
+            for (String region : shaanxiRegions) {
+                Result<List<Scenic>> result = scenicService.queryPageByRegionName(1, 100, region);
+                if (result != null && result.getData() != null && !result.getData().isEmpty()) {
+                    allScenics.addAll(result.getData());
+                }
+            }
+
+            // 如果找到了景点，取前20个返回
+            if (!allScenics.isEmpty()) {
+                return allScenics.stream()
+                        .limit(20)
+                        .map(s -> String.format("🏛 %s - %s（%s）",
+                            s.getScenicName(),
+                            s.getScenicLocateDescription(),
+                            getRegionNameById(s.getRegionId())))
+                        .collect(Collectors.joining("\n"));
+            } else {
+                return "陕西景点数据暂时无法获取，请稍后再试。";
+            }
+        } else {
+            // 正常查询单个地区
+            Result<List<Scenic>> result = scenicService.queryPageByRegionName(1, 10, regionName);
+
+            // 如果没有找到景点，返回提示信息
+            if (result == null || result.getData() == null || result.getData().isEmpty()) {
+                return regionName + "的景点数据暂时无法获取，可以试试具体的地区名称，比如西安、咸阳等。";
+            }
+
+            // 将景点信息按格式拼接成字符串并返回
+            return result.getData().stream()
+                    .map(s -> String.format("🏛 %s - %s", s.getScenicName(), s.getScenicLocateDescription()))
+                    .collect(Collectors.joining("\n"));
         }
+    }
 
-        // 将景点信息按格式拼接成字符串并返回
-        return result.getData().stream()
-                .map(s -> String.format("🏛 %s - %s", s.getScenicName(), s.getScenicLocateDescription()))
-                .collect(Collectors.joining("\n"));
+    // 辅助方法：根据regionId获取地区名称
+    private String getRegionNameById(Integer regionId) {
+        // 简单映射，实际可以从数据库或缓存获取
+        switch (regionId) {
+            case 1: return "西安";
+            case 2: return "咸阳";
+            case 3: return "宝鸡";
+            case 4: return "渭南";
+            case 5: return "延安";
+            case 6: return "榆林";
+            case 7: return "汉中";
+            case 8: return "安康";
+            case 9: return "商洛";
+            case 10: return "铜川";
+            default: return "未知地区";
+        }
     }
 
 

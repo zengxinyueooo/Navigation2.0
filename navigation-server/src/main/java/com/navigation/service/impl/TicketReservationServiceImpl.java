@@ -73,8 +73,8 @@ public class TicketReservationServiceImpl extends ServiceImpl<TicketReservationM
         }
 
         // 从UserHolder获取userId并设置到ticketReservation对象
-        Integer userId = 2; //
-        //Integer userId = BaseContext.getUserId();
+        //Integer userId = 2; //
+        Integer userId = BaseContext.getUserId();
         ticketReservation.setUserId(userId);
 
         // 检查用户是否存在

@@ -2,6 +2,7 @@ package com.navigation.utils;
 
 import com.navigation.vo.StreamEventDataVO;
 import com.navigation.vo.StreamEventVO;
+import com.navigation.vo.TravelPlanVO;
 
 public class StreamEventVOBuilder {
 
@@ -47,6 +48,16 @@ public class StreamEventVOBuilder {
                         .event("error")
                         .content(errorMessage)
                         .build())
+                .build();
+    }
+
+    /**
+     * 构建结构化行程数据事件
+     */
+    public static StreamEventVO buildPlanEvent(TravelPlanVO plan) {
+        return StreamEventVO.builder()
+                .type("plan")
+                .plan(plan)
                 .build();
     }
 }
