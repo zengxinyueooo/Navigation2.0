@@ -3,6 +3,8 @@ package com.navigation.service;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.navigation.config.QwenConfig;
+import com.navigation.entity.Scenic;
+import com.navigation.result.Result;
 import com.navigation.vo.TravelPlanVO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -31,6 +33,9 @@ public class TravelPlanExtractService {
 
     @Autowired
     private QwenConfig qwenConfig;
+
+    @Autowired
+    private ScenicService scenicService;
 
     /**
      * 从完整的旅游规划文本中提取结构化数据
@@ -222,13 +227,25 @@ public class TravelPlanExtractService {
                     {
                       "day": 1,
                       "items": [
-                        {"type": "scenic", "name": "景点名", "time": "09:00-12:00", "price": 120},
-                        {"type": "hotel", "name": "酒店名", "price": 380}
+                        {
+                          "type": "scenic",
+                          "name": "景点名",
+                          "time": "09:00-12:00",
+                          "price": 120,
+                          "location": "从文本中提取的位置信息",
+                          "description": "从文本中提取的景点描述(50字以内)"
+                        }
                       ]
                     }
                   ],
                   "totalCost": 1500
                 }
+
+                重要提示:
+                1. location和description必须从文本中提取,不要编造
+                2. 如果文本中没有明确的location或description,则设为null
+                3. description限制在50字以内
+                4. 只提取文本中明确提到的信息
 
                 旅游规划文本:
                 %s
@@ -264,6 +281,32 @@ public class TravelPlanExtractService {
 
             TravelPlanVO plan = JSON.parseObject(content, TravelPlanVO.class);
 
+            // 后处理逻辑(快速执行,避免阻塞SSE)
+            if (plan != null && plan.getDays() != null) {
+                // 1. 计算每天的dayCost(如果AI没有返回)
+                for (TravelPlanVO.DayPlan day : plan.getDays()) {
+                    if (day.getDayCost() == null && day.getItems() != null) {
+                        BigDecimal cost = day.getItems().stream()
+                            .map(TravelPlanVO.PlanItem::getPrice)
+                            .filter(p -> p != null)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        day.setDayCost(cost);
+                    }
+                }
+
+                // 2. 生成summary(如果AI没有返回)
+                if (plan.getSummary() == null || plan.getSummary().isEmpty()) {
+                    plan.setSummary(generateSummary(plan.getDays()));
+                }
+
+                // 3. 重新计算totalCost(确保准确性)
+                BigDecimal totalCost = plan.getDays().stream()
+                    .map(TravelPlanVO.DayPlan::getDayCost)
+                    .filter(cost -> cost != null)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                plan.setTotalCost(totalCost);
+            }
+
             response.close();
             client.close();
 
@@ -272,6 +315,37 @@ public class TravelPlanExtractService {
         } catch (Exception e) {
             log.error("[TravelPlanExtractService] AI提取失败 | error={}", e.getMessage(), e);
             return null;
+        }
+    }
+
+    /**
+     * 从Redis查询并填充景点真实信息(快速查询)
+     */
+    private void enrichItemFromRedis(TravelPlanVO.PlanItem item) {
+        try {
+            // 从Redis查询景点信息
+            Result<List<Scenic>> result = scenicService.queryScenicByName(item.getName());
+
+            if (result != null && result.getData() != null && !result.getData().isEmpty()) {
+                Scenic scenic = result.getData().get(0);
+
+                // 填充真实的location和description
+                if (scenic.getScenicLocateDescription() != null) {
+                    item.setLocation(scenic.getScenicLocateDescription());
+                }
+
+                if (scenic.getScenicDescription() != null) {
+                    // description可能很长,截取前100字
+                    String desc = scenic.getScenicDescription();
+                    if (desc.length() > 100) {
+                        desc = desc.substring(0, 100) + "...";
+                    }
+                    item.setDescription(desc);
+                }
+            }
+        } catch (Exception e) {
+            // 静默失败,不影响主流程
+            log.debug("[TravelPlanExtractService] Redis查询失败 | name={}", item.getName());
         }
     }
 

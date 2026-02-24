@@ -1,5 +1,6 @@
 package com.navigation.vo;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class TravelPlanVO {
 
     /**
@@ -43,11 +45,6 @@ public class TravelPlanVO {
         private Integer day;
 
         /**
-         * 日期描述
-         */
-        private String date;
-
-        /**
          * 当天行程项
          */
         private List<PlanItem> items;
@@ -67,11 +64,6 @@ public class TravelPlanVO {
          * 类型: scenic(景点), hotel(酒店), food(美食), transport(交通)
          */
         private String type;
-
-        /**
-         * 数据库ID
-         */
-        private Long id;
 
         /**
          * 名称
